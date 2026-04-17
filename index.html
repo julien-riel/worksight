@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Détection d'objets — Gemma 4 E4B</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    max-width: 1100px;
+    margin: 2em auto;
+    padding: 0 1em;
+    line-height: 1.5;
+  }
+  h1 { font-weight: 600; margin-bottom: .2em; }
+  .subtitle { color: #64748b; margin-top: 0; }
+  .drop-zone {
+    border: 2px dashed #94a3b8;
+    border-radius: 10px;
+    padding: 2.5em 1em;
+    text-align: center;
+    cursor: pointer;
+    transition: all .15s;
+    color: #475569;
+  }
+  .drop-zone:hover, .drop-zone.dragging {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.06);
+    color: #1e40af;
+  }
+  .controls { display: flex; gap: .5em; margin: 1em 0; flex-wrap: wrap; }
+  input[type=text] {
+    flex: 1;
+    min-width: 250px;
+    padding: .7em;
+    font-size: 1em;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: inherit;
+    color: inherit;
+  }
+  button {
+    padding: .7em 1.3em;
+    font-size: 1em;
+    border: 0;
+    border-radius: 6px;
+    background: #3b82f6;
+    color: white;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  button:hover:not(:disabled) { background: #2563eb; }
+  button:disabled { background: #94a3b8; cursor: not-allowed; }
+  button.secondary { background: #64748b; }
+  button.secondary:hover:not(:disabled) { background: #475569; }
+  .stage {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    margin-top: 1em;
+  }
+  .stage canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+  }
+  .stage img { max-width: 100%; display: block; border-radius: 6px; }
+  #status {
+    margin: 1em 0;
+    color: #475569;
+    min-height: 1.5em;
+    font-size: .95em;
+  }
+  #status.error { color: #dc2626; }
+  #exports { display: flex; gap: .5em; margin-top: 1em; flex-wrap: wrap; }
+  .hidden { display: none !important; }
+  .hint { font-size: .85em; color: #94a3b8; margin-top: .3em; }
+</style>
+</head>
+<body>
+  <h1>Détection d'objets</h1>
+  <p class="subtitle">Propulsé par Gemma 4 E4B en local</p>
+
+  <div id="dropZone" class="drop-zone">
+    <p><strong>Glisse une image ici</strong>, ou clique pour en choisir une</p>
+    <p class="hint">Les images sont redimensionnées à 768 px max côté client</p>
+    <input type="file" id="fileInput" accept="image/*" class="hidden">
+  </div>
+
+  <div class="controls">
+    <input type="text" id="promptInput"
+           placeholder="Ce que tu cherches (ex: tous les chiens)"
+           value="tous les objets">
+    <button id="detectBtn" disabled>Détecter</button>
+    <button id="resetBtn" class="secondary">Réinitialiser</button>
+  </div>
+
+  <div id="status"></div>
+
+  <div class="stage" id="stage">
+    <img id="preview" class="hidden">
+    <canvas id="overlay"></canvas>
+  </div>
+
+  <div id="exports" class="hidden">
+    <button id="exportPng" class="secondary">Exporter PNG annoté</button>
+    <button id="exportJson" class="secondary">Exporter JSON</button>
+  </div>
+
+<script>
+const MAX_SIZE = 768;
+let currentImage = null;
+let currentDetections = null;
+
+const $ = (id) => document.getElementById(id);
+const dropZone = $('dropZone');
+const fileInput = $('fileInput');
+const preview = $('preview');
+const overlay = $('overlay');
+const detectBtn = $('detectBtn');
+const resetBtn = $('resetBtn');
+const statusEl = $('status');
+const exportsEl = $('exports');
+const promptInput = $('promptInput');
+
+function setStatus(msg, isError = false) {
+  statusEl.textContent = msg;
+  statusEl.classList.toggle('error', isError);
+}
+
+function hashColor(str) {
+  let h = 0;
+  for (const ch of str) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return `hsl(${h % 360}, 75%, 50%)`;
+}
+
+function loadImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, MAX_SIZE / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(img.src);
+      resolve({ dataUrl: canvas.toDataURL('image/jpeg', 0.9), width: w, height: h });
+    };
+    img.onerror = () => { URL.revokeObjectURL(img.src); reject(new Error('Image illisible')); };
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+function syncOverlaySize() {
+  overlay.width = preview.naturalWidth;
+  overlay.height = preview.naturalHeight;
+  overlay.style.width = preview.clientWidth + 'px';
+  overlay.style.height = preview.clientHeight + 'px';
+}
+
+function drawDetections(detections) {
+  syncOverlaySize();
+  const ctx = overlay.getContext('2d');
+  const W = overlay.width, H = overlay.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.lineWidth = Math.max(2, Math.round(W / 300));
+  const fontSize = Math.max(14, Math.round(W / 50));
+  ctx.font = `600 ${fontSize}px -apple-system, sans-serif`;
+  ctx.textBaseline = 'top';
+
+  for (const d of detections) {
+    if (!Array.isArray(d.box) || d.box.length !== 4) continue;
+    const [y1, x1, y2, x2] = d.box.map(Number);
+    const px = x1 / 1000 * W;
+    const py = y1 / 1000 * H;
+    const pw = (x2 - x1) / 1000 * W;
+    const ph = (y2 - y1) / 1000 * H;
+    const color = hashColor(d.label || 'obj');
+
+    ctx.strokeStyle = color;
+    ctx.strokeRect(px, py, pw, ph);
+
+    const label = (d.label || '').trim();
+    if (label) {
+      const pad = Math.round(fontSize * 0.3);
+      const metrics = ctx.measureText(label);
+      const bgH = fontSize + pad * 2;
+      const labelY = py - bgH >= 0 ? py - bgH : py;
+      ctx.fillStyle = color;
+      ctx.fillRect(px, labelY, metrics.width + pad * 2, bgH);
+      ctx.fillStyle = 'white';
+      ctx.fillText(label, px + pad, labelY + pad);
+    }
+  }
+}
+
+async function handleFile(file) {
+  try {
+    setStatus('Chargement de l\u2019image\u2026');
+    currentImage = await loadImageFile(file);
+    currentDetections = null;
+    exportsEl.classList.add('hidden');
+    preview.classList.remove('hidden');
+    preview.onload = () => {
+      syncOverlaySize();
+      overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
+    };
+    preview.src = currentImage.dataUrl;
+    detectBtn.disabled = false;
+    setStatus(`Image chargée (${currentImage.width}\u00a0\u00d7\u00a0${currentImage.height}\u00a0px)`);
+  } catch (err) {
+    setStatus('Erreur\u00a0: ' + err.message, true);
+  }
+}
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('dragging');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragging'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragging');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+detectBtn.addEventListener('click', async () => {
+  if (!currentImage) return;
+  detectBtn.disabled = true;
+  setStatus('Détection en cours\u2026 (peut prendre quelques secondes)');
+  try {
+    const r = await fetch('/detect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image_b64: currentImage.dataUrl,
+        prompt: promptInput.value || 'tous les objets'
+      })
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    currentDetections = data.detections || [];
+    preview.classList.remove('hidden');
+    drawDetections(currentDetections);
+    const elapsed = typeof data.elapsed === 'number' ? ` en ${data.elapsed.toFixed(1)}\u00a0s` : '';
+    setStatus(`${currentDetections.length} objet(s) détecté(s)${elapsed}`);
+    exportsEl.classList.remove('hidden');
+  } catch (err) {
+    setStatus('Erreur\u00a0: ' + err.message, true);
+  } finally {
+    detectBtn.disabled = false;
+  }
+});
+
+resetBtn.addEventListener('click', () => {
+  currentImage = null;
+  currentDetections = null;
+  preview.src = '';
+  preview.classList.add('hidden');
+  overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
+  detectBtn.disabled = true;
+  exportsEl.classList.add('hidden');
+  fileInput.value = '';
+  setStatus('');
+});
+
+$('exportPng').addEventListener('click', () => {
+  if (!currentDetections) return;
+  const out = document.createElement('canvas');
+  out.width = preview.naturalWidth;
+  out.height = preview.naturalHeight;
+  const ctx = out.getContext('2d');
+  ctx.drawImage(preview, 0, 0);
+  ctx.drawImage(overlay, 0, 0);
+  out.toBlob(blob => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'detection.png';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }, 'image/png');
+});
+
+$('exportJson').addEventListener('click', () => {
+  if (!currentDetections) return;
+  const blob = new Blob([JSON.stringify(currentDetections, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'detection.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+
+window.addEventListener('resize', () => {
+  if (currentDetections) drawDetections(currentDetections);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environnements virtuels
+.venv/
+venv/
+env/
+
+# macOS
+.DS_Store
+
+# Éditeurs
+.vscode/
+.idea/
+*.swp
+
+# Exports locaux
+detection.png
+detection.json
+
+# Logs
+*.log
