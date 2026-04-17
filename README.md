@@ -1,6 +1,8 @@
-# Détection de chantiers et entraves — Gemma 4 E4B
+# worksight
 
-Détection automatique des **chantiers de construction et entraves sur le domaine public** à partir d'images, puis d'un flux vidéo dashcam, en **edge computing**. Propulsé par [Gemma 4 E4B](https://huggingface.co/google/gemma-4-E4B-it) en local via [Ollama](https://ollama.com).
+**Détection automatique des chantiers de construction et entraves sur le domaine public** à partir d'images, puis d'un flux vidéo dashcam, en **edge computing**. Propulsé par [Gemma 4 E4B](https://huggingface.co/google/gemma-4-E4B-it) en local via [Ollama](https://ollama.com).
+
+*Worksight* = *worksite* + *sight* — voir les chantiers.
 
 ## Objectif
 
@@ -53,7 +55,7 @@ brew install ollama
 brew services start ollama
 ollama pull gemma4:e4b
 
-cd testing-gemma4
+cd worksight
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -79,7 +81,7 @@ Ouvrir <http://localhost:8000>. Au démarrage, `[warmup] Chargement de gemma4:e4
 ## Architecture
 
 ```
-testing-gemma4/
+worksight/
 ├── server.py          # FastAPI, warm-up lifespan, proxy /detect vers Ollama
 ├── index.html         # UI vanilla JS + Canvas overlay (onglet Détection actuel)
 ├── requirements.txt   # fastapi, uvicorn, httpx
