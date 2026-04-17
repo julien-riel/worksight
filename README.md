@@ -53,7 +53,7 @@ brew install ollama
 brew services start ollama
 ollama pull gemma4:e4b
 
-cd /Users/julienriel/src/testing-gemma4
+cd testing-gemma4
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -120,3 +120,15 @@ Le code actuel (Ollama HTTP) tourne déjà sur les deux. YOLO distillé : export
 - **Bboxes mal placées** — vérifier le format `[y1, x1, y2, x2]` normalisé 0–1000
 - **Première détection plus lente** — le warm-up a peut-être échoué. Vérifier les logs `uvicorn` pour `[warmup] Échec…`
 - **Lenteur / throttling** — fermer les apps lourdes, le MacBook Air est sans ventilateur
+
+## Licence
+
+Le code de ce dépôt est distribué sous licence **Apache 2.0** (voir `LICENSE`).
+
+Les composants tiers utilisés ont leurs propres conditions :
+
+- **[Gemma 4](https://ai.google.dev/gemma/terms)** — Google Gemma Terms of Use
+- **[ROADWork dataset](https://arxiv.org/html/2406.07661v2)** — licence de recherche (citer le papier ICCV 2025 de Ghosh et al. si vous utilisez le dataset ; respecter les conditions d'usage des auteurs)
+- **[Ollama](https://github.com/ollama/ollama)** — MIT
+
+Les scripts à venir qui téléchargent ROADWork respecteront la licence du dataset et afficheront une note d'attribution.
