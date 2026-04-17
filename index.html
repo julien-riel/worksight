@@ -2,18 +2,72 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Détection d'objets — Gemma 4 E4B</title>
+<title>Worksight — Gemma 4 E4B</title>
 <style>
   :root { color-scheme: light dark; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     max-width: 1100px;
-    margin: 2em auto;
+    margin: 1.2em auto;
     padding: 0 1em;
     line-height: 1.5;
   }
   h1 { font-weight: 600; margin-bottom: .2em; }
   .subtitle { color: #64748b; margin-top: 0; }
+
+  .model-selector {
+    display: inline-flex;
+    gap: 0;
+    margin-top: .8em;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .model-selector label {
+    padding: .5em 1em;
+    cursor: pointer;
+    background: transparent;
+    color: #64748b;
+    font-size: .9em;
+    font-weight: 500;
+    border-right: 1px solid #cbd5e1;
+    user-select: none;
+  }
+  .model-selector label:last-child { border-right: 0; }
+  .model-selector label:hover { background: rgba(59, 130, 246, 0.06); }
+  .model-selector input[type=radio] { display: none; }
+  .model-selector label:has(input:checked) {
+    background: #2563eb;
+    color: white;
+  }
+
+  nav.tabs {
+    display: flex;
+    gap: .3em;
+    border-bottom: 1px solid #cbd5e1;
+    margin: 1.5em 0 1.2em;
+  }
+  nav.tabs button {
+    background: transparent;
+    color: inherit;
+    border: 0;
+    padding: .7em 1.2em;
+    font-size: 1em;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    border-radius: 0;
+  }
+  nav.tabs button:hover { color: #2563eb; }
+  nav.tabs button.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+  }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
   .drop-zone {
     border: 2px dashed #94a3b8;
     border-radius: 10px;
@@ -29,7 +83,7 @@
     color: #1e40af;
   }
   .controls { display: flex; gap: .5em; margin: 1em 0; flex-wrap: wrap; }
-  input[type=text] {
+  input[type=text], textarea {
     flex: 1;
     min-width: 250px;
     padding: .7em;
@@ -38,7 +92,9 @@
     border-radius: 6px;
     background: inherit;
     color: inherit;
+    font-family: inherit;
   }
+  textarea { resize: vertical; min-height: 4em; }
   button {
     padding: .7em 1.3em;
     font-size: 1em;
@@ -66,47 +122,253 @@
     pointer-events: none;
   }
   .stage img { max-width: 100%; display: block; border-radius: 6px; }
-  #status {
+  #status, #chatStatus {
     margin: 1em 0;
     color: #475569;
     min-height: 1.5em;
     font-size: .95em;
   }
-  #status.error { color: #dc2626; }
+  #status.error, #chatStatus.error { color: #dc2626; }
   #exports { display: flex; gap: .5em; margin-top: 1em; flex-wrap: wrap; }
   .hidden { display: none !important; }
   .hint { font-size: .85em; color: #94a3b8; margin-top: .3em; }
+
+  .chat-history {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 1em;
+    min-height: 300px;
+    max-height: 55vh;
+    overflow-y: auto;
+    background: rgba(148, 163, 184, 0.05);
+    margin-bottom: 1em;
+  }
+  .chat-msg {
+    padding: .6em .9em;
+    border-radius: 10px;
+    margin: .4em 0;
+    max-width: 85%;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .chat-msg.user {
+    background: #3b82f6;
+    color: white;
+    margin-left: auto;
+  }
+  .chat-msg.assistant {
+    background: rgba(148, 163, 184, 0.18);
+    margin-right: auto;
+  }
+  .chat-msg .role {
+    font-size: .75em;
+    opacity: .7;
+    margin-bottom: .2em;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+
+  .placeholder {
+    text-align: center;
+    padding: 4em 1em;
+    color: #94a3b8;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+  }
+  .placeholder h2 { color: #64748b; font-weight: 500; }
+
+  details.system-prompt {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: .4em .8em;
+    margin-bottom: 1em;
+    background: rgba(148, 163, 184, 0.05);
+    font-size: .9em;
+  }
+  details.system-prompt summary {
+    cursor: pointer;
+    color: #64748b;
+    font-weight: 500;
+    padding: .2em 0;
+  }
+  details.system-prompt[open] summary { margin-bottom: .5em; }
+  details.system-prompt .note {
+    color: #64748b;
+    font-style: italic;
+    margin: .3em 0 .5em;
+  }
+  details.system-prompt pre {
+    background: rgba(0,0,0,0.04);
+    padding: .7em;
+    border-radius: 4px;
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .85em;
+  }
+
+  details.samples {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: .4em .8em;
+    margin-bottom: 1em;
+    background: rgba(148, 163, 184, 0.05);
+  }
+  details.samples summary {
+    cursor: pointer;
+    color: #475569;
+    font-weight: 500;
+    padding: .2em 0;
+  }
+  details.samples[open] summary { margin-bottom: .6em; }
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: .5em;
+  }
+  .gallery .empty {
+    grid-column: 1 / -1;
+    color: #94a3b8;
+    font-style: italic;
+    padding: .5em;
+  }
+  .thumb {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color .15s, transform .1s;
+    background: rgba(0,0,0,0.05);
+  }
+  .thumb:hover {
+    border-color: #3b82f6;
+    transform: translateY(-1px);
+  }
+  .thumb.selected { border-color: #2563eb; }
+  .thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .thumb .badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    color: white;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: .7em;
+    font-weight: 600;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    box-shadow: 0 1px 2px rgba(0,0,0,.25);
+  }
+  .thumb.with-construction .badge { background: #f97316; }
+  .thumb.no-construction .badge { background: #22c55e; }
+  .thumb .name {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,.55);
+    color: white;
+    font-size: .7em;
+    text-align: center;
+    padding: 2px 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
 </style>
 </head>
 <body>
-  <h1>Détection d'objets</h1>
-  <p class="subtitle">Propulsé par Gemma 4 E4B en local</p>
+  <h1>Worksight</h1>
+  <p class="subtitle">Détection de chantiers · 2 backends interchangeables</p>
 
-  <div id="dropZone" class="drop-zone">
-    <p><strong>Glisse une image ici</strong>, ou clique pour en choisir une</p>
-    <p class="hint">Les images sont redimensionnées à 768 px max côté client</p>
-    <input type="file" id="fileInput" accept="image/*" class="hidden">
+  <div class="model-selector" id="modelSelector">
+    <label><input type="radio" name="model" value="gemma" checked> Gemma 4 E4B (Ollama local)</label>
+    <label><input type="radio" name="model" value="claude"> Claude Sonnet 4.6 (abonnement)</label>
   </div>
 
-  <div class="controls">
-    <input type="text" id="promptInput"
-           placeholder="Ce que tu cherches (ex: tous les chiens)"
-           value="tous les objets">
-    <button id="detectBtn" disabled>Détecter</button>
-    <button id="resetBtn" class="secondary">Réinitialiser</button>
-  </div>
+  <nav class="tabs" id="tabs">
+    <button data-tab="detect" class="active">Détection</button>
+    <button data-tab="chat">Chat</button>
+    <button data-tab="loop">Boucle</button>
+  </nav>
 
-  <div id="status"></div>
+  <!-- ========== Onglet Détection ========== -->
+  <section id="panel-detect" class="panel active">
+    <details class="system-prompt" id="sysDetect">
+      <summary>System prompt envoyé au modèle</summary>
+      <div class="content"><em>Chargement…</em></div>
+    </details>
 
-  <div class="stage" id="stage">
-    <img id="preview" class="hidden">
-    <canvas id="overlay"></canvas>
-  </div>
+    <details class="samples" id="samplesBlock" open>
+      <summary>Échantillons ROADWork — clique pour charger</summary>
+      <div id="gallery" class="gallery">
+        <div class="empty">Chargement…</div>
+      </div>
+    </details>
 
-  <div id="exports" class="hidden">
-    <button id="exportPng" class="secondary">Exporter PNG annoté</button>
-    <button id="exportJson" class="secondary">Exporter JSON</button>
-  </div>
+    <div id="dropZone" class="drop-zone">
+      <p><strong>Glisse une image ici</strong>, ou clique pour en choisir une</p>
+      <p class="hint">Les images sont redimensionnées à 768 px max côté client</p>
+      <input type="file" id="fileInput" accept="image/*" class="hidden">
+    </div>
+
+    <div class="controls">
+      <input type="text" id="promptInput"
+             placeholder="Ce que tu cherches (ex: tous les chiens)"
+             value="tous les objets">
+      <button id="detectBtn" disabled>Détecter</button>
+      <button id="resetBtn" class="secondary">Réinitialiser</button>
+    </div>
+
+    <div id="status"></div>
+
+    <div class="stage" id="stage">
+      <img id="preview" class="hidden">
+      <canvas id="overlay"></canvas>
+    </div>
+
+    <div id="exports" class="hidden">
+      <button id="exportPng" class="secondary">Exporter PNG annoté</button>
+      <button id="exportJson" class="secondary">Exporter JSON</button>
+    </div>
+  </section>
+
+  <!-- ========== Onglet Chat ========== -->
+  <section id="panel-chat" class="panel">
+    <details class="system-prompt" id="sysChat">
+      <summary>System prompt envoyé au modèle</summary>
+      <div class="content"><em>Chargement…</em></div>
+    </details>
+
+    <div id="chatHistory" class="chat-history"></div>
+    <div class="controls">
+      <textarea id="chatInput" placeholder="Pose une question à Gemma 4…"></textarea>
+    </div>
+    <div class="controls">
+      <button id="chatSend">Envoyer</button>
+      <button id="chatClear" class="secondary">Effacer la conversation</button>
+    </div>
+    <div id="chatStatus"></div>
+  </section>
+
+  <!-- ========== Onglet Boucle ========== -->
+  <section id="panel-loop" class="panel">
+    <details class="system-prompt" id="sysLoop">
+      <summary>System prompt envoyé au modèle</summary>
+      <div class="content"><em>Chargement…</em></div>
+    </details>
+
+    <div class="placeholder">
+      <h2>Boucle de rétroaction</h2>
+      <p>À venir — itération de prompts sur le set de validation, mode éditeur puis automatique.</p>
+    </div>
+  </section>
 
 <script>
 const MAX_SIZE = 768;
@@ -114,6 +376,53 @@ let currentImage = null;
 let currentDetections = null;
 
 const $ = (id) => document.getElementById(id);
+
+/* ========== Modèle actif ========== */
+function getActiveModel() {
+  const checked = document.querySelector('#modelSelector input[name=model]:checked');
+  return checked ? checked.value : 'gemma';
+}
+
+/* ========== System prompts (read-only) ========== */
+async function loadSystemPrompts() {
+  try {
+    const r = await fetch('/system-prompts');
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    for (const [tab, info] of Object.entries(data)) {
+      const el = document.getElementById('sys' + tab.charAt(0).toUpperCase() + tab.slice(1));
+      if (!el) continue;
+      const target = el.querySelector('.content');
+      target.innerHTML = '';
+      if (info.note) {
+        const note = document.createElement('p');
+        note.className = 'note';
+        note.textContent = info.note;
+        target.appendChild(note);
+      }
+      if (info.system) {
+        const pre = document.createElement('pre');
+        pre.textContent = info.system;
+        target.appendChild(pre);
+      }
+    }
+  } catch (err) {
+    console.error('Échec chargement system prompts:', err);
+  }
+}
+loadSystemPrompts();
+
+/* ========== Onglets ========== */
+document.querySelectorAll('#tabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    $('panel-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+/* ========== Détection ========== */
 const dropZone = $('dropZone');
 const fileInput = $('fileInput');
 const preview = $('preview');
@@ -197,6 +506,20 @@ function drawDetections(detections) {
   }
 }
 
+async function loadFromUrl(url, displayName) {
+  try {
+    setStatus('Téléchargement de l\u2019échantillon\u2026');
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const blob = await r.blob();
+    const name = displayName || url.split('/').pop();
+    const file = new File([blob], name, { type: blob.type || 'image/jpeg' });
+    await handleFile(file);
+  } catch (err) {
+    setStatus('Erreur\u00a0: ' + err.message, true);
+  }
+}
+
 async function handleFile(file) {
   try {
     setStatus('Chargement de l\u2019image\u2026');
@@ -241,7 +564,8 @@ detectBtn.addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         image_b64: currentImage.dataUrl,
-        prompt: promptInput.value || 'tous les objets'
+        prompt: promptInput.value || 'tous les objets',
+        model: getActiveModel()
       })
     });
     if (!r.ok) throw new Error(await r.text());
@@ -250,7 +574,8 @@ detectBtn.addEventListener('click', async () => {
     preview.classList.remove('hidden');
     drawDetections(currentDetections);
     const elapsed = typeof data.elapsed === 'number' ? ` en ${data.elapsed.toFixed(1)}\u00a0s` : '';
-    setStatus(`${currentDetections.length} objet(s) détecté(s)${elapsed}`);
+    const modelTag = data.model ? ` [${data.model}]` : '';
+    setStatus(`${currentDetections.length} objet(s) détecté(s)${elapsed}${modelTag}`);
     exportsEl.classList.remove('hidden');
   } catch (err) {
     setStatus('Erreur\u00a0: ' + err.message, true);
@@ -300,6 +625,130 @@ $('exportJson').addEventListener('click', () => {
 
 window.addEventListener('resize', () => {
   if (currentDetections) drawDetections(currentDetections);
+});
+
+/* ========== Galerie d'échantillons ========== */
+async function loadGallery() {
+  const gallery = $('gallery');
+  try {
+    const r = await fetch('/samples/manifest.json');
+    if (!r.ok) {
+      gallery.innerHTML = '<div class="empty">Aucun échantillon. Lance <code>python3 fetch_sample.py</code>.</div>';
+      return;
+    }
+    const data = await r.json();
+    const samples = data.samples || [];
+    if (!samples.length) {
+      gallery.innerHTML = '<div class="empty">Manifest vide.</div>';
+      return;
+    }
+    gallery.innerHTML = '';
+    for (const s of samples) {
+      const div = document.createElement('div');
+      div.className = 'thumb ' + (s.has_construction ? 'with-construction' : 'no-construction');
+      div.title = s.scene_description || s.file;
+
+      const img = document.createElement('img');
+      img.src = '/samples/' + s.file;
+      img.loading = 'lazy';
+      img.alt = s.file;
+
+      const badge = document.createElement('span');
+      badge.className = 'badge';
+      badge.textContent = s.has_construction ? 'chantier' : 'sans';
+
+      const name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = s.file.replace('.jpg', '');
+
+      div.appendChild(img);
+      div.appendChild(badge);
+      div.appendChild(name);
+
+      div.addEventListener('click', () => {
+        document.querySelectorAll('.thumb.selected').forEach(t => t.classList.remove('selected'));
+        div.classList.add('selected');
+        loadFromUrl('/samples/' + s.file, s.file);
+      });
+
+      gallery.appendChild(div);
+    }
+  } catch (err) {
+    gallery.innerHTML = '<div class="empty">Erreur de chargement\u00a0: ' + err.message + '</div>';
+  }
+}
+loadGallery();
+
+/* ========== Chat ========== */
+const chatHistory = $('chatHistory');
+const chatInput = $('chatInput');
+const chatSend = $('chatSend');
+const chatClear = $('chatClear');
+const chatStatus = $('chatStatus');
+let chatMessages = [];
+
+function setChatStatus(msg, isError = false) {
+  chatStatus.textContent = msg;
+  chatStatus.classList.toggle('error', isError);
+}
+
+function renderChat() {
+  chatHistory.innerHTML = '';
+  for (const m of chatMessages) {
+    const div = document.createElement('div');
+    div.className = 'chat-msg ' + m.role;
+    const role = document.createElement('div');
+    role.className = 'role';
+    role.textContent = m.role === 'user' ? 'Toi' : 'Gemma 4';
+    const body = document.createElement('div');
+    body.textContent = m.content;
+    div.appendChild(role);
+    div.appendChild(body);
+    chatHistory.appendChild(div);
+  }
+  chatHistory.scrollTop = chatHistory.scrollHeight;
+}
+
+async function sendChat() {
+  const text = chatInput.value.trim();
+  if (!text) return;
+  chatMessages.push({ role: 'user', content: text });
+  chatInput.value = '';
+  renderChat();
+  chatSend.disabled = true;
+  setChatStatus('Gemma réfléchit\u2026');
+  try {
+    const r = await fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: chatMessages, model: getActiveModel() })
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    chatMessages.push({ role: 'assistant', content: data.content || '(réponse vide)' });
+    renderChat();
+    const elapsed = typeof data.elapsed === 'number' ? `Réponse en ${data.elapsed.toFixed(1)}\u00a0s` : '';
+    const modelTag = data.model ? ` [${data.model}]` : '';
+    setChatStatus(elapsed + modelTag);
+  } catch (err) {
+    setChatStatus('Erreur\u00a0: ' + err.message, true);
+  } finally {
+    chatSend.disabled = false;
+    chatInput.focus();
+  }
+}
+
+chatSend.addEventListener('click', sendChat);
+chatInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault();
+    sendChat();
+  }
+});
+chatClear.addEventListener('click', () => {
+  chatMessages = [];
+  renderChat();
+  setChatStatus('');
 });
 </script>
 </body>

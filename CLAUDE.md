@@ -15,27 +15,39 @@ Détection de **chantiers de construction et entraves sur le domaine public** av
 
 ## État actuel
 
-MVP onglet Détection fonctionnel :
-- Backend FastAPI (`server.py`) : proxy vers Ollama, warm-up, `keep_alive: -1`
-- Frontend `index.html` : upload + prompt + bboxes overlay + export PNG/JSON
-- Redimensionnement client à 768 px, temps d'analyse affiché
+App à 3 onglets, **2 backends interchangeables** (Gemma local / Claude abonnement) :
+- Backend FastAPI (`server.py`) :
+  - `POST /detect` et `POST /chat` acceptent `model: "gemma" | "claude"`
+  - **Gemma** : Ollama `/api/generate` (detect, format=json) + `/api/chat` (chat), warm-up, `keep_alive: -1`
+  - **Claude** : Agent SDK Python (`claude-agent-sdk`), modèle `claude-sonnet-4-6`, auth via login Claude Code local (pas de clé API)
+  - Parse JSON robuste pour Claude (extraction des fences markdown, fallback sur premier `[...]`/`{...}`)
+  - `GET /system-prompts` (read-only)
+  - `/samples` (StaticFiles) sert `data/samples/`
+- Frontend `index.html` :
+  - Sélecteur de modèle global en header (radio Gemma/Claude), passé dans toutes les requêtes
+  - Nav 3 onglets (Détection / Chat / Boucle)
+  - **Détection** : galerie ROADWork + upload + prompt + bboxes overlay + export PNG/JSON, redim. 768 px
+  - **Chat** : historique multi-tours côté client, raccourci ⌘+Entrée
+  - **Boucle** : placeholder
+  - Bloc `<details>` *System prompt* dans chaque onglet
+- `fetch_sample.py` : 20 images via `natix-network-org/roadwork` HF (10 chantier + 10 sans) → `data/samples/` + `manifest.json`
 
-## Prochaine étape : JOUR 1
+## Prochaine étape : JOUR 2
 
-Dans l'ordre :
+JOUR 1 ✅ entièrement complété (3 onglets, fetch_sample, picker, smoke test). Bonus : mode Claude ajouté.
 
-1. **Restructurer l'UI en 3 onglets** (Détection / Chat / Boucle)
-   - Détection = page actuelle, déplacée dans un panneau
-   - Chat = formulaire + historique multi-tours côté client + endpoint `/chat` sans images
-   - Boucle = placeholder *"à venir"*
-2. **`fetch_sample.py`** : 20 images ROADWork (10 avec / 10 sans chantier) via HuggingFace → `data/samples/` + `manifest.json`
-3. **Picker d'échantillons** dans l'onglet Détection (galerie thumbnail)
-4. **Smoke test manuel** par l'utilisateur (3–5 prompts + questions au Chat sur les échecs)
+**Baseline prompt validé par smoke test : `Chantier?`** (interrogatif court > descriptif long).
+
+Dans l'ordre pour JOUR 2 :
+
+1. **Vérité-terrain** (~30 min) : annotation binaire manuelle des 20 images (chantier oui/non) → CSV
+2. **Onglet Boucle — mode éditeur** (~2 h) : run batch + table résultats vs vérité-terrain + édition prompt + métriques (rappel/précision/F1/temps)
+3. **Itération** (~1 h) : 5+ variantes de prompts via l'UI, meilleur sélectionné selon rappel prioritaire
 
 ## Décisions clés (ne pas redébattre sans raison)
 
-- Modèle : **Gemma 4 E4B** via Ollama
-- Dataset : **ROADWork** (ICCV 2025) via HuggingFace
+- Modèles : **Gemma 4 E4B** (Ollama local, défaut) + **Claude Sonnet 4.6** (Agent SDK, abonnement) — sélecteur global dans l'UI
+- Dataset : **ROADWork** via HF mirror `natix-network-org/roadwork` (l'officiel `anuragxel/roadwork-dataset` HF est vide)
 - Métriques phase 1 : **rappel ≥ 95 %**, précision ~80 %, optimisé vitesse avant précision
 - UI : app unique à **3 onglets** (Détection / Chat / Boucle)
 - Boucle : **mode éditeur d'abord**, mode automatique ensuite (cap 10 itérations, stop 3 rondes sans amélioration)

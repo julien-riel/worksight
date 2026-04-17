@@ -25,3 +25,6 @@ detection.json
 
 # Logs
 *.log
+
+# Datasets locaux (téléchargés via fetch_sample.py)
+data/

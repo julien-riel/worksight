@@ -86,10 +86,11 @@ Trois appels Gemma par itération :
 
 ### Jour 1 — Fondations
 
-**1.1 Restructuration UI en 3 onglets** (~1 h)
-- Convertir la page actuelle en onglet "Détection"
-- Ajouter onglet "Chat" (formulaire + historique côté client, même endpoint Ollama sans image)
-- Placeholder pour onglet "Boucle"
+**1.1 Restructuration UI en 3 onglets** ✅ *fait*
+- Onglet "Détection" : ancienne page intégrée
+- Onglet "Chat" : historique multi-tours côté client, endpoint `POST /chat` (Ollama `/api/chat`)
+- Onglet "Boucle" : placeholder
+- Bonus : endpoint `GET /system-prompts` + bloc repliable read-only dans chaque onglet pour voir les prompts injectés
 
 **1.2 Script `fetch_sample.py`** (~1 h)
 - Récupère 20 images ROADWork depuis HuggingFace (10 avec / 10 sans chantier)
@@ -100,9 +101,10 @@ Trois appels Gemma par itération :
 - Galerie thumbnail des 20 images
 - Clic = charge l'image dans la zone de détection
 
-**1.4 Smoke test** (~1 h)
-- Détection sur les 20 images avec 3–5 prompts
-- Utiliser l'onglet Chat pour comprendre les échecs (*"pourquoi pas de chantier ici ?"*)
+**1.4 Smoke test** ✅ *fait*
+- Plusieurs prompts testés sur les 20 images
+- **Finding clé** : prompt court interrogatif **`Chantier?`** est le plus performant et identifie relativement bien. Servira de baseline pour le mode éditeur (JOUR 2.2).
+- Mode Claude (Sonnet 4.6) ajouté en bonus — 2 backends interchangeables via sélecteur global
 
 ### Jour 2 — Mesure + mode éditeur
 
