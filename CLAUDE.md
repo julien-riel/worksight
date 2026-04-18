@@ -74,3 +74,21 @@ JOUR 1 ✅ / JOUR 2 ✅ (2.1, 2.2, 2.3 terminés). Sweep automatique de 12 runs 
 - Listes de todos granulaires (utiliser le système de tâches en session)
 
 **Principe :** si ce fichier dépasse ~100 lignes, refactorer vers `PLAN.md` ou `README.md`.
+
+## Entretien des autres docs
+
+**`README.md` doit être maintenu à jour** — c'est la porte d'entrée utilisateur. Toute modification qui affecte ce qu'un utilisateur voit ou fait doit se refléter dedans :
+
+- Nouveau script (`fetch_*.py`, `annotate_*.py`, etc.) → ajouter à la table des scripts
+- Nouvel onglet ou changement majeur de l'UI → mettre à jour la section *App web — 4 onglets* et le workflow
+- Nouvelle dépendance (brew, pip) → section *Installation*
+- Nouveau endpoint serveur → table *Endpoints backend*
+- Nouveau champ dans `manifest.json` ou `annotations.json` → exemple JSON de la section *Jeu de données*
+- Nouveau raccourci clavier / filtre / comportement UI → workflow étape 3
+- Changement de prompt par défaut, paramètre, seuil → table *Paramètres à ajuster*
+
+Lire `README.md` après toute modification significative et corriger ce qui est devenu faux. Les sections *Arborescence*, *Scripts utilitaires*, *Endpoints backend* et *Workflow dataset-builder* sont celles qui vieillissent le plus vite.
+
+**`docs/STATUT.md` doit refléter l'état courant** — chiffres (nombre de samples, validations, vidéos), progression roadmap, risques actifs. Mettre à jour après chaque avancée concrète (export, re-run d'annotation, nouvelle vidéo ajoutée, etc.).
+
+**`docs/INTENTION.md`, `docs/ARCHITECTURE.md`, `docs/PERIMETRE.md`** — ne bougent qu'en cas de pivot ou de changement de structure. À ne pas éditer pour des détails.

@@ -1,62 +1,79 @@
 # worksight
 
-**Détection automatique des chantiers de construction et entraves sur le domaine public** à partir d'images, puis d'un flux vidéo dashcam, en **edge computing**. Propulsé par **2 backends interchangeables** :
-- **Gemma 4 E4B** en local via [Ollama](https://ollama.com) (défaut)
-- **Claude Sonnet 4.6** via [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk-python) (utilise ton abonnement Claude, pas de clé API)
+**Détection automatique des chantiers et entraves sur le domaine public** à partir d'images et de vidéos dashcam, pour entraîner un modèle **YOLO 8** déployable en **edge computing**. Pipeline construit autour de deux backends :
+
+- **Gemma 4 E4B** en local via [Ollama](https://ollama.com) — auto-annotation rapide
+- **Claude Sonnet 4.6** via [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk-python) — oracle de comparaison (abonnement Claude, pas de clé API)
 
 *Worksight* = *worksite* + *sight* — voir les chantiers.
 
-## Objectif
+## But final
 
-Pipeline complet intégré dans **une seule app web** à 3 onglets, avec sélecteur de modèle global (Gemma ↔ Claude) :
+Construire un jeu de données tri-classe (**chantier** / **signalisation** / **sans**) pour entraîner YOLO 8 sur Jetson Orin NX et Mac mini M4.
 
-1. **Détection** — upload image ou picker d'échantillons ROADWork, prompt, bboxes en overlay
-2. **Chat** — conversation libre multi-tours pour explorer le raisonnement du modèle
-3. **Boucle** — raffinage itératif du prompt sur un set de validation, en 2 modes (à venir)
+Voir **[`docs/INTENTION.md`](docs/INTENTION.md)** pour l'intention détaillée, **[`docs/STATUT.md`](docs/STATUT.md)** pour l'état courant chiffré, **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)** pour les composants, **[`docs/PERIMETRE.md`](docs/PERIMETRE.md)** pour ce qui est essentiel vs « voire trop ».
 
-À terme : distillation vers YOLO spécialisé pour déploiement edge (Jetson Orin NX + Mac mini M4, double cible anti vendor lock-in).
+## App web — 4 onglets
 
-## Métriques cibles
+Une seule app web, sélecteur de modèle global (Gemma ↔ Claude) :
 
-Classification binaire par frame : chantier présent / absent.
+| Onglet | Rôle |
+|---|---|
+| **Détection** | Upload image ou picker ROADWork, prompt, bboxes overlay, export PNG/JSON |
+| **Chat** | Conversation libre multi-tours — diagnostic/exploration |
+| **Boucle** | Batch sur les 20 images ROADWork + métriques rappel/précision/F1 + historique des runs |
+| **Dataset** | Galerie des candidats par vidéo, modal plein écran avec canvas d'édition bboxes, validation 3 classes, export vers `data/samples/` |
 
-| Métrique | Cible | Pourquoi |
-|---|---|---|
-| **Rappel** | ≥ 95 % | Rater un chantier est grave |
-| **Précision** | ~ 80 % | Faux positifs filtrables par temporal smoothing |
-| **Latence** | À mesurer | Cible edge définie après benchmark |
+## Jeu de données
 
-## Dataset
+`data/samples/manifest.json` est la source de vérité. Chaque entrée contient :
 
-**[ROADWork](https://arxiv.org/html/2406.07661v2)** (ICCV 2025), 9650 images annotées + 4375 vidéos, 5000+ zones de chantier dans 18 villes.
+```json
+{
+  "file": "dashcam_downtown-olympic_frame_000028.jpg",
+  "label": 1,
+  "has_construction": true,
+  "category": "chantier",        // "chantier" | "signalisation" | "sans"
+  "source": "video:downtown-olympic",
+  "original_frame": "frame_000028.jpg",
+  "validated_as": "positive",
+  "pseudo_boxes": [...],          // pré-annotations Gemma (référence)
+  "boxes": [...]                  // bboxes vérité-terrain dessinées par l'humain
+}
+```
 
-Pull initial via le mirror HuggingFace [`natix-network-org/roadwork`](https://huggingface.co/datasets/natix-network-org/roadwork) (le dépôt officiel `anuragxel/roadwork-dataset` HF est vide). Le script `fetch_sample.py` télécharge **20 images** en streaming (10 avec chantier, 10 sans) sans rapatrier les 10.5 GB du dataset complet.
+### Sources d'images
 
-## État actuel
+- **ROADWork** (ICCV 2025) — 20 images via le mirror HF [`natix-network-org/roadwork`](https://huggingface.co/datasets/natix-network-org/roadwork) pour le jeu d'évaluation
+- **Dashcams YouTube** — vidéos Montréal de la chaîne [`@DadsDashCam`](https://www.youtube.com/@DadsDashCam), découpées en frames à 2 fps, pré-annotées par Gemma, validées humainement dans l'UI
 
-Ce qui fonctionne :
+## Pipeline dataset-builder
 
-- **Backend FastAPI** (`server.py`) avec dispatcher 2 backends :
-  - `gemma_*` : Ollama `/api/generate` (`format: "json"`) + `/api/chat`, warm-up, `keep_alive: -1`
-  - `claude_*` : Claude Agent SDK (`claude-agent-sdk`), modèle `claude-sonnet-4-6`, auth automatique via login Claude Code local (`~/.claude/`)
-  - Parse JSON robuste pour Claude (extraction des fences markdown, fallback sur premier `[...]`/`{...}`)
-- **Frontend HTML/JS vanilla** (`index.html`) :
-  - **Sélecteur de modèle global** dans le header (radio Gemma/Claude), passé dans toutes les requêtes
-  - **3 onglets** : Détection (drag-drop ou picker thumbnail des 20 échantillons + prompt + bboxes overlay + export PNG/JSON), Chat (multi-tours côté client), Boucle (placeholder)
-  - **System prompts visibles** dans chaque onglet (bloc `<details>` read-only, alimenté par `GET /system-prompts`)
-- **Script `fetch_sample.py`** : streaming HF, sauve dans `data/samples/` avec `manifest.json`
-- Redimensionnement client à 768 px, temps d'analyse + tag du modèle utilisé affichés
-
-**Baseline prompt validé par smoke test :** `Chantier?` (interrogatif court > descriptif long).
-
-**Roadmap :** voir `PLAN.md` pour le séquençage jour 1 / jour 2 et la suite.
+```
+YouTube URL  ─►  fetch_video.py  ─►  frames/frame_NNNNNN.jpg
+                                     │
+                                     ▼
+                          annotate_video.py (Gemma + smoothing 3/5 + retry)
+                                     │
+                                     ▼
+                          annotations.json (pseudo-labels)
+                                     │
+                                     ▼
+                          UI onglet Dataset (validation humaine)
+                                     │
+                                     ▼
+                          data/samples/ + manifest.json
+                                     │
+                                     ▼
+                          [à venir] YOLO 8 training
+```
 
 ## Prérequis
 
-- macOS avec Apple Silicon (testé sur MacBook Air 24 Go)
+- macOS avec Apple Silicon
 - [Homebrew](https://brew.sh)
-- **Python ≥ 3.10** (le SDK Claude Agent ne supporte pas 3.9). Recommandé : `brew install python@3.12`
-- Pour le mode Claude : être déjà loggé dans [Claude Code](https://docs.claude.com/en/docs/claude-code) (l'Agent SDK utilise les credentials locaux dans `~/.claude/`)
+- **Python ≥ 3.10** (le SDK Claude Agent ne supporte pas 3.9) — recommandé `brew install python@3.12`
+- Pour le mode Claude : être déjà loggé dans [Claude Code](https://docs.claude.com/en/docs/claude-code) (l'Agent SDK utilise `~/.claude/` automatiquement)
 
 ## Installation
 
@@ -66,14 +83,17 @@ brew install ollama
 brew services start ollama
 ollama pull gemma4:e4b
 
+# Outils pour le pipeline vidéo
+brew install yt-dlp ffmpeg
+
 # Worksight
 cd worksight
-python3.12 -m venv .venv      # ou un autre Python ≥ 3.10
+python3.12 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# Pull initial des 20 échantillons ROADWork (~30 MB)
+# Pull initial des 20 échantillons ROADWork (jeu d'éval)
 python3 fetch_sample.py
 ```
 
@@ -84,99 +104,148 @@ source .venv/bin/activate
 uvicorn server:app --reload
 ```
 
-Ouvrir <http://localhost:8000>. Au démarrage, `[warmup] Chargement de gemma4:e4b…` puis `[warmup] Modèle prêt.` signalent que la première détection Gemma sera déjà chaude. Claude n'a pas besoin de warm-up (latence cold-start négligeable côté SDK).
+Ouvrir <http://localhost:8000>. Au démarrage, `[warmup] Modèle prêt.` signale que Gemma est chargé.
 
-## Utilisation
+## Workflow dataset-builder
 
-### Sélecteur de modèle
+**1. Télécharger et découper une vidéo**
 
-En haut de la page, choisir **Gemma 4 E4B** (local) ou **Claude Sonnet 4.6** (abonnement). Le choix s'applique aux onglets Détection et Chat. Le tag du modèle utilisé est affiché après chaque réponse (`[gemma]` ou `[claude]`).
-
-### Onglet Détection
-
-1. Cliquer une thumbnail dans la galerie *Échantillons ROADWork* (badge orange = chantier, vert = sans), **ou** glisser une image dans la zone de dépôt
-2. Taper la requête (baseline validée : `Chantier?`)
-3. Cliquer **Détecter**
-4. Les bboxes s'affichent en overlay, une couleur par label
-5. Exporter en **PNG annoté** ou **JSON**
-
-### Onglet Chat
-
-Conversation libre multi-tours (sans images). L'historique est gardé côté client et renvoyé à chaque tour. Bouton **Effacer** pour repartir à zéro. Raccourci ⌘+Entrée pour envoyer.
-
-### System prompts
-
-Chaque onglet expose un bloc repliable **System prompt envoyé au modèle** (read-only) qui montre exactement ce que le serveur injecte avant ton prompt utilisateur.
-
-## Architecture
-
-```
-worksight/
-├── server.py          # FastAPI, dispatcher 2 backends (Gemma/Claude), warm-up
-├── index.html         # UI vanilla JS, 3 onglets + sélecteur modèle + Canvas overlay
-├── fetch_sample.py    # Streaming HF → 20 images ROADWork dans data/samples/
-├── requirements.txt   # fastapi, uvicorn, httpx, datasets, Pillow, claude-agent-sdk
-├── data/samples/      # (gitignored) 20 JPEG + manifest.json (créé par fetch_sample.py)
-├── PLAN.md            # séquençage détaillé, décisions, roadmap
-├── README.md
-├── CLAUDE.md          # contexte persistant pour sessions Claude Code
-└── .gitignore
+```bash
+python3 fetch_video.py https://youtu.be/gSyn204dCHY --duration 600 --fps 2 --name downtown-olympic
 ```
 
-**Endpoints du backend :**
+Sort `data/video-frames/downtown-olympic/` avec `frames/` et `metadata.json`.
+
+**2. Pré-annoter avec Gemma**
+
+```bash
+python3 annotate_video.py downtown-olympic
+# options : --prompt "..." --window 5 --threshold 3 --retries 3 --limit N
+```
+
+Sort `annotations.json` avec `per_frame`, `segments`, `candidates`, `validations` (préserve les validations existantes au re-run).
+
+**3. Valider dans l'UI**
+
+Ouvrir l'onglet **Dataset**, sélectionner la vidéo :
+
+- **Filtres** : Candidats positifs (Gemma + smoothing), Positifs isolés (rejetés par smoothing), Non-candidats (pour échantillonner des négatifs), Toutes, ou par décision
+- **Sampling** pour les grands filtres (Non-candidats, Toutes) : 50 / 100 / 200 / 500 / tout, avec seed stable et bouton *Re-tirer*
+- **Pagination** 100 par page
+- **Clic sur une vignette** → modal plein écran avec canvas d'édition de bboxes (pseudo-Gemma en bleu pointillé, tes bboxes GT en vert plein)
+
+Décisions (raccourcis clavier dans le modal) :
+
+| Touche | Décision | Classe exportée |
+|---|---|---|
+| **C** | Chantier | `category: "chantier"`, `has_construction: true` |
+| **G** | Signalisation | `category: "signalisation"`, `has_construction: false` |
+| **N** | Sans | `category: "sans"`, `has_construction: false` |
+| **S** | Skip | Exclu du dataset |
+| **A** | Annuler | Repart en attente |
+| **←** / **→** | Navigation | |
+| **I** | Importer pseudo-boxes Gemma comme bboxes humaines | |
+| **Delete** | Supprimer dernière bbox dessinée | |
+| **Échap** | Fermer modal | |
+
+Les validations sont mises en queue côté client (badge orange *Sauvegarder maintenant (N)*) puis flushées toutes les 2 s via `POST /validations/batch` — une seule écriture disque par lot.
+
+**4. Exporter vers le dataset**
+
+Bouton **Exporter** dans l'onglet Dataset → copie les frames validées dans `data/samples/` et append au manifest.
+
+## Scripts utilitaires
+
+| Script | Rôle |
+|---|---|
+| `fetch_sample.py` | Télécharge 20 images ROADWork (jeu d'éval) |
+| `fetch_video.py` | YouTube → vidéo → frames |
+| `annotate_video.py` | Gemma + smoothing + retry sur les frames d'une vidéo |
+| `run_iterations.py` | Sweep automatique de prompts sur le set ROADWork (archive JOUR 2) |
+| `bench_prompts.py` | Compare N prompts sur un échantillon de frames (parse-error rate, positive rate, temps) |
+
+## Endpoints backend
 
 | Méthode | Route | Rôle |
 |---|---|---|
 | `GET` | `/` | Sert `index.html` |
-| `POST` | `/detect` | Reçoit `{image_b64, prompt, model}`, dispatch vers Gemma (Ollama) ou Claude (Agent SDK), retourne `{detections, elapsed, model}` |
-| `POST` | `/chat` | Reçoit `{messages: [{role, content}], model}`, dispatch idem, retourne `{content, elapsed, model}` |
-| `GET` | `/system-prompts` | Retourne les system prompts injectés par onglet (lecture seule pour l'UI) |
-| `GET` | `/samples/*` | Sert `data/samples/` en static (images + `manifest.json`) |
+| `GET` | `/system-prompts` | Expose les system prompts utilisés |
+| `POST` | `/detect` | `{image_b64, prompt, model}` → `{detections, elapsed, model}` |
+| `POST` | `/chat` | `{messages, model}` → `{content, elapsed, model}` |
+| `GET` | `/samples/*` | Static `data/samples/` |
+| `GET` | `/video-frames/*` | Static `data/video-frames/` |
+| `GET` | `/videos` | Liste des vidéos avec état d'annotation |
+| `GET` | `/videos/{name}/annotations` | `annotations.json` (avec migration auto des anciens formats) |
+| `POST` | `/videos/{name}/validations` | Une décision (legacy) |
+| `POST` | `/videos/{name}/validations/batch` | Lot de décisions (batch-save UI) |
+| `POST` | `/videos/{name}/export` | Copie les frames validées vers `data/samples/` |
 
-- **Frontend** : redimensionnement côté client à 768 px, overlay Canvas positionné en absolu, export PNG via composition + `toBlob`, export JSON via `Blob`. Historique de chat conservé en mémoire JS.
-- **Format des bboxes** : `[y1, x1, y2, x2]` normalisées sur 0–1000 (convention native Gemma 4 ; Claude est instruit de produire le même format via le system prompt).
-- **Auth Claude** : zéro config, l'Agent SDK utilise `~/.claude/` automatiquement quand `ANTHROPIC_API_KEY` n'est pas défini.
+## Arborescence
+
+```
+worksight/
+├── server.py              # FastAPI, 2 backends, endpoints /videos/*, /detect, /chat
+├── index.html             # UI vanilla JS/CSS, 4 onglets
+├── fetch_sample.py        # Pull 20 ROADWork
+├── fetch_video.py         # YouTube → frames
+├── annotate_video.py      # Gemma + smoothing + retry
+├── run_iterations.py      # Sweep prompts (archive JOUR 2)
+├── bench_prompts.py       # Compare prompts sur échantillon
+├── requirements.txt       # fastapi, uvicorn, httpx, datasets, Pillow, claude-agent-sdk
+├── data/                  # (gitignored)
+│   ├── samples/           # Dataset final + manifest.json
+│   └── video-frames/      # Staging par vidéo (frames + annotations.json)
+├── benchmarks/            # Archives runs JOUR 2 + sweeps ponctuels
+├── docs/                  # INTENTION, STATUT, ARCHITECTURE, PERIMETRE
+├── CLAUDE.md              # Contexte persistant sessions Claude Code
+├── PLAN.md                # Archive séquençage JOUR 1/2
+└── README.md              # Ce fichier
+```
+
+## Paramètres à ajuster
+
+| Fichier | Paramètre | Rôle |
+|---|---|---|
+| `server.py` | `GEMMA_MODEL` | Modèle Ollama (`gemma4:e4b`) |
+| `server.py` | `CLAUDE_MODEL` | Modèle Claude (`claude-sonnet-4-6`) |
+| `server.py` | `DETECT_SYSTEM_PROMPT` | Consignes de détection |
+| `server.py` | `keep_alive` | Rétention Gemma en RAM (`-1` = indéfini) |
+| `annotate_video.py` | `DEFAULT_PROMPT` | Prompt auto-annotation par défaut |
+| `annotate_video.py` | `DEFAULT_RETRIES` | Essais max sur parse error (`3`) |
+| `index.html` | `MAX_SIZE` | Taille max image côté client (`768`) |
+| `index.html` | `DS_PAGE_SIZE` | Taille de page de la galerie Dataset (`100`) |
+
+## Dépannage
+
+- **"Ollama a répondu…"** — vérifier qu'Ollama tourne (`brew services list` ou `curl http://localhost:11434`)
+- **"claude-agent-sdk non installé"** — venv probablement en Python 3.9, recréer avec `python3.12 -m venv .venv`
+- **"Sortie JSON invalide"** — Gemma a renvoyé du texte hors JSON. `annotate_video.py` retry 3 fois automatiquement. Dans l'UI (onglet Détection), retenter ou simplifier le prompt
+- **Bboxes mal placées** — format attendu : `[y1, x1, y2, x2]` normalisé 0–1000
+- **Première détection Gemma lente** — warm-up possiblement échoué, voir logs `uvicorn` pour `[warmup] Échec…`
+- **Galerie ROADWork vide** — lancer `python3 fetch_sample.py`
+- **Onglet Dataset vide** — lancer `python3 fetch_video.py <url>` puis `python3 annotate_video.py <nom>`
+- **Lenteur / throttling** — fermer les apps lourdes, MacBook Air sans ventilateur
 
 ## Cibles edge (post-MVP)
 
-Stratégie **double cible** pour éviter le vendor lock-in :
+Stratégie double cible pour éviter le vendor lock-in :
 
 | Matériel | Prix ~ | Écosystème | Rôle |
 |---|---|---|---|
 | **Jetson Orin NX 16GB** | 600–800 $US | NVIDIA (CUDA, TensorRT) | Perf/$ optimal pour VLM + YOLO |
 | **Mac mini M4 16GB** | 599 $US | Apple Silicon (Metal, Ollama natif) | Continuité avec le dev actuel |
 
-Le code actuel (Ollama HTTP) tourne déjà sur les deux. YOLO distillé : exportable ONNX → TensorRT (Jetson) + CoreML (Mac).
-
-## Paramètres à ajuster
-
-| Fichier | Paramètre | Rôle |
-|---|---|---|
-| `server.py` | `GEMMA_MODEL` | Modèle Ollama (par défaut `gemma4:e4b`) |
-| `server.py` | `CLAUDE_MODEL` | Modèle Claude (par défaut `claude-sonnet-4-6` ; alt. `claude-opus-4-7`, `claude-haiku-4-5`) |
-| `server.py` | `DETECT_SYSTEM_PROMPT` | Consignes de détection (commun aux 2 backends) |
-| `server.py` | `keep_alive` | Durée de rétention Gemma en RAM (`-1` = indéfini) |
-| `server.py` | `timeout=180.0` | Timeout de l'appel Ollama |
-| `index.html` | `MAX_SIZE` | Taille max d'image côté client (768 par défaut) |
-| `fetch_sample.py` | `N_PER_LABEL` | Nombre d'images à pull par classe (10 par défaut) |
-
-## Dépannage
-
-- **"Ollama a répondu…"** — vérifier qu'Ollama tourne (`brew services list` ou `curl http://localhost:11434`)
-- **"claude-agent-sdk non installé"** — le venv est probablement en Python 3.9. Recréer avec ≥ 3.10 (`python3.12 -m venv .venv`).
-- **"Sortie JSON invalide"** — le modèle a retourné du texte hors JSON. Côté Claude le parser tolère les fences markdown ; sinon retenter ou simplifier le prompt
-- **Bboxes mal placées** — vérifier le format `[y1, x1, y2, x2]` normalisé 0–1000
-- **Première détection Gemma plus lente** — le warm-up a peut-être échoué. Vérifier les logs `uvicorn` pour `[warmup] Échec…`
-- **Galerie d'échantillons vide** — lancer `python3 fetch_sample.py` (le dossier `data/samples/` n'est pas commité)
-- **Lenteur / throttling** — fermer les apps lourdes, le MacBook Air est sans ventilateur
+Le code actuel (Ollama HTTP) tourne sur les deux. YOLO distillé : exportable ONNX → TensorRT (Jetson) + CoreML (Mac).
 
 ## Licence
 
 Le code de ce dépôt est distribué sous licence **Apache 2.0** (voir `LICENSE`).
 
-Les composants tiers utilisés ont leurs propres conditions :
+Composants tiers :
 
 - **[Gemma 4](https://ai.google.dev/gemma/terms)** — Google Gemma Terms of Use
-- **[ROADWork dataset](https://arxiv.org/html/2406.07661v2)** — Open Data Commons Attribution License v1.0 (citer le papier ICCV 2025 de Ghosh et al. si vous utilisez le dataset). `fetch_sample.py` pull via le mirror communautaire [`natix-network-org/roadwork`](https://huggingface.co/datasets/natix-network-org/roadwork) sur HuggingFace.
+- **[ROADWork dataset](https://arxiv.org/html/2406.07661v2)** — Open Data Commons Attribution License v1.0 (citer le papier ICCV 2025 de Ghosh et al. si vous utilisez le dataset)
 - **[Ollama](https://github.com/ollama/ollama)** — MIT
 - **[Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk-python)** — MIT (l'usage de Claude lui-même est régi par les [Anthropic Terms of Service](https://www.anthropic.com/legal/consumer-terms) liés à votre abonnement)
+- **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** — The Unlicense
+- **[FFmpeg](https://ffmpeg.org/)** — LGPL / GPL selon build
