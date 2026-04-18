@@ -1,0 +1,136 @@
+{
+  "video": "downtown-olympic",
+  "frames_sampled": 60,
+  "retries": 3,
+  "generated_at": "2026-04-18T01:06:13.071758+00:00",
+  "results": [
+    {
+      "prompt": "Travaux en cours?",
+      "n_frames": 60,
+      "n_positive": 21,
+      "n_parse_error": 1,
+      "positive_rate": 0.35,
+      "parse_error_rate": 0.016666666666666666,
+      "avg_elapsed": 5.149832014242808,
+      "total_elapsed": 308.9899208545685,
+      "top_labels": [
+        [
+          "travaux en cours",
+          19
+        ],
+        [
+          "voiture",
+          1
+        ],
+        [
+          "travaux",
+          1
+        ],
+        [
+          "travaux en cours?",
+          1
+        ]
+      ],
+      "n_distinct_labels": 4,
+      "code": "T",
+      "batch_elapsed": 309.16459798812866
+    },
+    {
+      "prompt": "Chantier ou signalisation?",
+      "n_frames": 60,
+      "n_positive": 50,
+      "n_parse_error": 1,
+      "positive_rate": 0.8333333333333334,
+      "parse_error_rate": 0.016666666666666666,
+      "avg_elapsed": 9.709872476259868,
+      "total_elapsed": 582.592348575592,
+      "top_labels": [
+        [
+          "signalisation",
+          85
+        ],
+        [
+          "chantier",
+          19
+        ],
+        [
+          "panneau de signalisation",
+          3
+        ],
+        [
+          "feu de signalisation",
+          2
+        ],
+        [
+          "voiture",
+          1
+        ]
+      ],
+      "n_distinct_labels": 5,
+      "code": "C",
+      "batch_elapsed": 582.7329590320587
+    },
+    {
+      "prompt": "Chantier, cônes, barrières ou panneaux de travaux?",
+      "n_frames": 60,
+      "n_positive": 51,
+      "n_parse_error": 0,
+      "positive_rate": 0.85,
+      "parse_error_rate": 0.0,
+      "avg_elapsed": 6.2562925259272255,
+      "total_elapsed": 375.37755155563354,
+      "top_labels": [
+        [
+          "panneaux de travaux",
+          40
+        ],
+        [
+          "panneau de travaux",
+          21
+        ],
+        [
+          "cônes",
+          20
+        ],
+        [
+          "chantier",
+          12
+        ],
+        [
+          "barrières",
+          7
+        ],
+        [
+          "chantier, cônes, barrières ou panneaux de travaux?",
+          1
+        ]
+      ],
+      "n_distinct_labels": 7,
+      "code": "E",
+      "batch_elapsed": 375.5368230342865
+    },
+    {
+      "prompt": "Aménagement temporaire de chantier routier?",
+      "n_frames": 60,
+      "n_positive": 25,
+      "n_parse_error": 0,
+      "positive_rate": 0.4166666666666667,
+      "parse_error_rate": 0.0,
+      "avg_elapsed": 4.462535885969798,
+      "total_elapsed": 267.75215315818787,
+      "top_labels": [
+        [
+          "aménagement temporaire de chantier routier",
+          26
+        ],
+        [
+          "aménagement temporaire de chantier routier?",
+          1
+        ]
+      ],
+      "n_distinct_labels": 2,
+      "code": "A",
+      "batch_elapsed": 267.9162108898163
+    }
+  ]
+}

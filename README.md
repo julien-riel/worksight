@@ -138,6 +138,7 @@ Décisions (raccourcis clavier dans le modal) :
 
 | Touche | Décision | Classe exportée |
 |---|---|---|
+| **Entrée** | Accepter la suggestion Gemma (basée sur les labels de détection) | la classe suggérée |
 | **C** | Chantier | `category: "chantier"`, `has_construction: true` |
 | **G** | Signalisation | `category: "signalisation"`, `has_construction: false` |
 | **N** | Sans | `category: "sans"`, `has_construction: false` |
@@ -147,6 +148,8 @@ Décisions (raccourcis clavier dans le modal) :
 | **I** | Importer pseudo-boxes Gemma comme bboxes humaines | |
 | **Delete** | Supprimer dernière bbox dessinée | |
 | **Échap** | Fermer modal | |
+
+**Suggestion automatique** : sur chaque frame, l'UI propose une classe basée sur les labels Gemma (ex : labels contenant `chantier` ou `ouvrier` → suggestion **Chantier** ; labels `cône`/`panneau`/`barrière` seuls → **Signalisation** ; aucune détection → **Sans**). Le bouton suggéré est highlighté en jaune et **Entrée** l'accepte. Les labels Gemma sont aussi affichés sous l'image (ex : `chantier ×1 · cônes ×3 · panneaux ×2`).
 
 Les validations sont mises en queue côté client (badge orange *Sauvegarder maintenant (N)*) puis flushées toutes les 2 s via `POST /validations/batch` — une seule écriture disque par lot.
 

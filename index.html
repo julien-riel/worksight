@@ -648,6 +648,27 @@
   .ds-modal-bar button.negative { background: #2563eb; color: white; }
   .ds-modal-bar button.skip { background: #f59e0b; color: #1e293b; }
   .ds-modal-bar button.reset { background: #64748b; color: white; }
+  .ds-modal-bar button.suggested {
+    outline: 2px solid #fde68a;
+    outline-offset: 3px;
+    box-shadow: 0 0 0 6px rgba(253, 230, 138, 0.25);
+  }
+  .ds-modal-suggest {
+    font-size: .82em;
+    color: #fde68a;
+    margin-left: .4em;
+  }
+  .ds-modal-labels {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .8em;
+    color: #cbd5e1;
+    background: rgba(30, 41, 59, 0.6);
+    padding: .35em .8em;
+    border-radius: 6px;
+    max-width: 90vw;
+    text-align: center;
+  }
+  .ds-modal-labels .empty { color: #94a3b8; font-style: italic; }
   .ds-modal-bar button:hover:not(:disabled) { filter: brightness(1.1); }
   .ds-modal-close {
     position: absolute;
@@ -872,6 +893,7 @@
           <img id="dsModalImg" alt="">
           <canvas id="dsModalCanvas"></canvas>
         </div>
+        <div class="ds-modal-labels" id="dsModalLabels"></div>
         <div class="ds-modal-bar">
           <span class="info" id="dsModalInfo"></span>
           <button class="positive" id="dsModalPositive">Chantier</button>
@@ -879,7 +901,7 @@
           <button class="negative" id="dsModalNegative">Sans</button>
           <button class="skip" id="dsModalSkip">Skip</button>
           <button class="reset" id="dsModalReset">Annuler</button>
-          <span class="hint">C = chantier · G = signalisation · N = sans · S = skip · A = annuler · ← → = navigation</span>
+          <span class="hint">Entrée = accepter suggestion · C/G/N/S/A · ← → · I import · Del</span>
         </div>
         <div class="ds-modal-bar ds-modal-bbox-bar">
           <span><span class="bbox-swatch pseudo"></span>pseudo-Gemma</span>
@@ -1878,6 +1900,52 @@ function openDsModal(idx) {
   dsModal.setAttribute('aria-hidden', 'false');
 }
 
+/* ---- Suggestion de classe basée sur les labels Gemma ----
+
+   Heuristique :
+   - chantier_keywords présents → suggère "positive" (chantier actif)
+   - sinon, signalisation_keywords présents → suggère "signalisation"
+   - sinon aucune détection → suggère "negative"
+   - sinon (détections sans keyword reconnu) → pas de suggestion
+*/
+const DS_KW_CHANTIER = [
+  'chantier', 'travaux en cours', 'ouvrier', 'machine',
+  'véhicule de chantier', 'pelle', 'excavatrice', 'camion de chantier'
+];
+const DS_KW_SIGNAL = [
+  'cône', 'cone', 'panneau', 'barrière', 'barriere', 'bollard',
+  'signalisation', 'barricade', 'feu de signalisation'
+];
+
+function dsSuggestFromLabels(detections) {
+  if (!Array.isArray(detections) || detections.length === 0) return 'negative';
+  const labels = detections.map(d => (d.label || '').toLowerCase());
+  const hasAny = (kws) => labels.some(l => kws.some(kw => l.includes(kw)));
+  if (hasAny(DS_KW_CHANTIER)) return 'positive';
+  if (hasAny(DS_KW_SIGNAL)) return 'signalisation';
+  return null;
+}
+
+function dsLabelSummary(detections) {
+  if (!Array.isArray(detections) || detections.length === 0) return null;
+  const counts = {};
+  for (const d of detections) {
+    const l = (d.label || '?').toLowerCase().trim();
+    counts[l] = (counts[l] || 0) + 1;
+  }
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([l, n]) => n > 1 ? `${l} ×${n}` : l)
+    .join(' · ');
+}
+
+const DS_SUGGEST_LABELS = {
+  positive: 'Chantier',
+  signalisation: 'Signalisation',
+  negative: 'Sans',
+};
+
 function renderDsModal() {
   if (dsModalIdx < 0) return;
   const f = dsVisibleFrames[dsModalIdx];
@@ -1894,9 +1962,30 @@ function renderDsModal() {
     : dec === 'skip'
     ? ' · SKIP'
     : '';
-  dsModalInfo.textContent =
-    `${dsModalIdx + 1}/${dsVisibleFrames.length} · ${f.frame} · ` +
-    `t=${f.ts.toFixed(1)}s · ${f.n_boxes} box${decLabel}`;
+
+  const suggestion = dsSuggestFromLabels(f.detections);
+  const sugTxt = suggestion
+    ? `<span class="ds-modal-suggest">Gemma suggère : ${DS_SUGGEST_LABELS[suggestion]} (Entrée)</span>`
+    : '';
+  dsModalInfo.innerHTML =
+    `${dsModalIdx + 1}/${dsVisibleFrames.length} · ${escapeHtml(f.frame)} · ` +
+    `t=${f.ts.toFixed(1)}s · ${f.n_boxes} box${decLabel}${sugTxt}`;
+
+  // Highlight le bouton suggéré
+  const sugMap = {
+    positive: $('dsModalPositive'),
+    signalisation: $('dsModalSignalisation'),
+    negative: $('dsModalNegative'),
+  };
+  for (const btn of Object.values(sugMap)) btn.classList.remove('suggested');
+  if (suggestion && sugMap[suggestion]) sugMap[suggestion].classList.add('suggested');
+
+  // Affichage des labels Gemma
+  const summary = dsLabelSummary(f.detections);
+  $('dsModalLabels').innerHTML = summary
+    ? `<strong>Gemma :</strong> ${escapeHtml(summary)}`
+    : '<span class="empty">aucune détection Gemma</span>';
+
   dsModalPrev.disabled = dsModalIdx === 0;
   dsModalNext.disabled = dsModalIdx === dsVisibleFrames.length - 1;
   renderBboxCounts();
@@ -2080,6 +2169,13 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { e.preventDefault(); closeDsModal(); }
   else if (e.key === 'ArrowLeft') { e.preventDefault(); navigateDsModal(-1); }
   else if (e.key === 'ArrowRight') { e.preventDefault(); navigateDsModal(1); }
+  else if (e.key === 'Enter') {
+    e.preventDefault();
+    const f = dsVisibleFrames[dsModalIdx];
+    if (!f) return;
+    const sug = dsSuggestFromLabels(f.detections);
+    if (sug) dsModalDecide(sug);
+  }
   else if (e.key === 'c' || e.key === 'C') { e.preventDefault(); dsModalDecide('positive'); }
   else if (e.key === 'g' || e.key === 'G') { e.preventDefault(); dsModalDecide('signalisation'); }
   else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); dsModalDecide('negative'); }

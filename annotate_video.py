@@ -23,7 +23,7 @@ from pathlib import Path
 import httpx
 
 SERVER = "http://127.0.0.1:8000"
-DEFAULT_PROMPT = "Chantier, Construction, Cônes ou bollard"
+DEFAULT_PROMPT = "Chantier, cônes, barrières ou panneaux de travaux?"
 DEFAULT_MODEL = "gemma"
 DEFAULT_RETRIES = 3
 
