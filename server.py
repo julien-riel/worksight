@@ -1,7 +1,9 @@
 import json
 import re
+import shutil
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
@@ -47,8 +49,15 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 SAMPLES_DIR = BASE_DIR / "data" / "samples"
+VIDEO_FRAMES_DIR = BASE_DIR / "data" / "video-frames"
 if SAMPLES_DIR.exists():
     app.mount("/samples", StaticFiles(directory=SAMPLES_DIR), name="samples")
+if VIDEO_FRAMES_DIR.exists():
+    app.mount(
+        "/video-frames",
+        StaticFiles(directory=VIDEO_FRAMES_DIR),
+        name="video-frames",
+    )
 
 
 class DetectRequest(BaseModel):
@@ -87,8 +96,19 @@ async def system_prompts():
             "note": "Aucun system prompt — l'historique multi-tours est envoyé tel quel au modèle sélectionné.",
         },
         "loop": {
-            "system": None,
-            "note": "À venir.",
+            "system": DETECT_SYSTEM_PROMPT,
+            "note": (
+                "Mode éditeur : le même system prompt que l'onglet Détection est appliqué "
+                "à chaque image du batch. Un résultat avec ≥1 boîte = « chantier détecté »."
+            ),
+        },
+        "dataset": {
+            "system": DETECT_SYSTEM_PROMPT,
+            "note": (
+                "Pré-annotation vidéo : `annotate_video.py` appelle /detect sur chaque frame, "
+                "applique un smoothing temporel, propose les frames candidates. "
+                "L'humain valide dans l'UI puis exporte vers data/samples/."
+            ),
         },
     }
 
@@ -284,3 +304,230 @@ async def chat(req: ChatRequest):
     elapsed = time.perf_counter() - start
 
     return {"content": content, "elapsed": elapsed, "model": req.model}
+
+
+# ============================================================
+# Dataset builder — videos pré-annotées
+# ============================================================
+
+
+def _video_dir(name: str) -> Path:
+    # Empêche le directory traversal
+    if "/" in name or ".." in name or not name:
+        raise HTTPException(400, "nom de vidéo invalide")
+    d = VIDEO_FRAMES_DIR / name
+    if not d.is_dir():
+        raise HTTPException(404, f"vidéo {name!r} introuvable")
+    return d
+
+
+_DECISION_ALIASES = {"keep": "positive", "reject": "negative"}
+
+
+def _load_annotations(name: str) -> tuple[Path, dict]:
+    d = _video_dir(name)
+    ann_path = d / "annotations.json"
+    if not ann_path.exists():
+        raise HTTPException(
+            404,
+            f"annotations manquantes — lance annotate_video.py {name}",
+        )
+    ann = json.loads(ann_path.read_text())
+    # Migration des anciennes décisions (keep → positive, reject → negative)
+    v = ann.get("validations") or {}
+    changed = False
+    for frame, entry in v.items():
+        dec = entry.get("decision")
+        if dec in _DECISION_ALIASES:
+            entry["decision"] = _DECISION_ALIASES[dec]
+            changed = True
+    if changed:
+        ann["validations"] = v
+        ann_path.write_text(json.dumps(ann, indent=2, ensure_ascii=False) + "\n")
+    return ann_path, ann
+
+
+class BBox(BaseModel):
+    box: list[float]
+    label: str = "chantier"
+
+
+class Validation(BaseModel):
+    frame: str
+    decision: Literal["positive", "signalisation", "negative", "skip", "reset"]
+    boxes: list[BBox] | None = None
+
+
+class BatchValidations(BaseModel):
+    items: list[Validation]
+
+
+@app.get("/videos")
+async def list_videos():
+    if not VIDEO_FRAMES_DIR.exists():
+        return {"videos": []}
+    out = []
+    for d in sorted(VIDEO_FRAMES_DIR.iterdir()):
+        if not d.is_dir():
+            continue
+        meta_path = d / "metadata.json"
+        ann_path = d / "annotations.json"
+        if not meta_path.exists():
+            continue
+        meta = json.loads(meta_path.read_text())
+        item = {
+            "name": d.name,
+            "title": meta.get("title"),
+            "n_frames": meta.get("n_frames", 0),
+            "has_annotations": ann_path.exists(),
+        }
+        if ann_path.exists():
+            ann = json.loads(ann_path.read_text())
+            item.update({
+                "n_candidates": ann.get("n_candidates", 0),
+                "n_segments": ann.get("n_segments", 0),
+                "prompt": ann.get("prompt"),
+                "model": ann.get("model"),
+            })
+        out.append(item)
+    return {"videos": out}
+
+
+@app.get("/videos/{name}/annotations")
+async def get_annotations(name: str):
+    _, ann = _load_annotations(name)
+    return ann
+
+
+@app.post("/videos/{name}/validations")
+async def set_validation(name: str, v: Validation):
+    ann_path, ann = _load_annotations(name)
+    validations = ann.setdefault("validations", {})
+    if v.decision == "reset":
+        validations.pop(v.frame, None)
+    else:
+        entry = {
+            "decision": v.decision,
+            "at": datetime.now(timezone.utc).isoformat(),
+        }
+        if v.boxes is not None:
+            entry["boxes"] = [b.model_dump() for b in v.boxes]
+        validations[v.frame] = entry
+    ann_path.write_text(json.dumps(ann, indent=2, ensure_ascii=False) + "\n")
+    counts = {"positive": 0, "signalisation": 0, "negative": 0, "skip": 0}
+    for entry in validations.values():
+        dec = entry.get("decision")
+        if dec in counts:
+            counts[dec] += 1
+    return {"ok": True, "counts": counts}
+
+
+@app.post("/videos/{name}/validations/batch")
+async def batch_set_validations(name: str, body: BatchValidations):
+    ann_path, ann = _load_annotations(name)
+    validations = ann.setdefault("validations", {})
+    now = datetime.now(timezone.utc).isoformat()
+    applied = 0
+    for item in body.items:
+        if item.decision == "reset":
+            if validations.pop(item.frame, None) is not None:
+                applied += 1
+        else:
+            entry = {"decision": item.decision, "at": now}
+            if item.boxes is not None:
+                entry["boxes"] = [b.model_dump() for b in item.boxes]
+            validations[item.frame] = entry
+            applied += 1
+    ann_path.write_text(json.dumps(ann, indent=2, ensure_ascii=False) + "\n")
+    counts = {"positive": 0, "signalisation": 0, "negative": 0, "skip": 0}
+    for e in validations.values():
+        d = e.get("decision")
+        if d in counts:
+            counts[d] += 1
+    return {"ok": True, "applied": applied, "counts": counts}
+
+
+@app.post("/videos/{name}/export")
+async def export_kept(name: str):
+    ann_path, ann = _load_annotations(name)
+    validations = ann.get("validations", {})
+    exportable = [
+        (f, v["decision"]) for f, v in validations.items()
+        if v.get("decision") in ("positive", "signalisation", "negative")
+    ]
+    if not exportable:
+        raise HTTPException(
+            400,
+            "Aucune frame marquée « chantier », « signalisation » ou « sans »",
+        )
+
+    src_dir = _video_dir(name) / ann["source_meta"]["frames_dir"]
+    SAMPLES_DIR.mkdir(parents=True, exist_ok=True)
+    manifest_path = SAMPLES_DIR / "manifest.json"
+    manifest = (
+        json.loads(manifest_path.read_text()) if manifest_path.exists()
+        else {"samples": []}
+    )
+    existing = {s["file"] for s in manifest["samples"]}
+
+    # Index des per_frame pour retrouver les pseudo-boxes Gemma
+    per_frame_by_name = {pf["frame"]: pf for pf in ann.get("per_frame", [])}
+
+    # Mapping décision → classe + flag binaire phase 1
+    # has_construction = True uniquement pour chantier actif; signalisation et sans = False
+    CLASS_MAP = {
+        "positive": ("chantier", True),
+        "signalisation": ("signalisation", False),
+        "negative": ("sans", False),
+    }
+
+    added_counts = {"chantier": [], "signalisation": [], "sans": []}
+    now = datetime.now(timezone.utc).isoformat()
+    for frame, decision in exportable:
+        src = src_dir / frame
+        if not src.exists():
+            continue
+        dst_name = f"dashcam_{name}_{frame}"
+        dst = SAMPLES_DIR / dst_name
+        if dst_name in existing:
+            continue
+        shutil.copy2(src, dst)
+        category, has_construction = CLASS_MAP[decision]
+        entry: dict = {
+            "file": dst_name,
+            "label": 1 if has_construction else 0,
+            "has_construction": has_construction,
+            "category": category,
+            "source": f"video:{name}",
+            "original_frame": frame,
+            "validated_as": decision,
+            "added_at": now,
+        }
+        # Pseudo-boxes Gemma uniquement pour classes contenant une détection visuelle
+        if decision in ("positive", "signalisation"):
+            pf = per_frame_by_name.get(frame, {})
+            pseudo = pf.get("detections") or []
+            if pseudo:
+                entry["pseudo_boxes"] = pseudo
+                entry["pseudo_boxes_model"] = ann.get("model")
+                entry["pseudo_boxes_prompt"] = ann.get("prompt")
+        # Bboxes humaines pour chantier ET signalisation (vérité-terrain tri-classe)
+        if decision in ("positive", "signalisation"):
+            user_boxes = (validations.get(frame) or {}).get("boxes")
+            if user_boxes:
+                entry["boxes"] = user_boxes
+        manifest["samples"].append(entry)
+        added_counts[category].append(dst_name)
+
+    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
+    return {
+        "ok": True,
+        "added_chantier": len(added_counts["chantier"]),
+        "added_signalisation": len(added_counts["signalisation"]),
+        "added_sans": len(added_counts["sans"]),
+        "files": (
+            added_counts["chantier"]
+            + added_counts["signalisation"]
+            + added_counts["sans"]
+        ),
+    }

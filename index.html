@@ -281,6 +281,408 @@
     padding: 2px 4px;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   }
+
+  .loop-prompt {
+    width: 100%;
+    min-height: 3.5em;
+    padding: .7em;
+    font-size: 1em;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: inherit;
+    color: inherit;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    box-sizing: border-box;
+  }
+  .loop-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: .6em;
+    margin: 1em 0;
+  }
+  .metric {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: .7em;
+    text-align: center;
+    background: rgba(148, 163, 184, 0.05);
+  }
+  .metric-label {
+    font-size: .75em;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin-bottom: .3em;
+  }
+  .metric-val {
+    font-size: 1.8em;
+    font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .metric.highlight .metric-val { color: #2563eb; }
+  .metric-details {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: #64748b;
+    font-size: .85em;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .loop-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .9em;
+  }
+  .loop-table th, .loop-table td {
+    padding: .5em .6em;
+    text-align: left;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+    vertical-align: middle;
+  }
+  .loop-table th {
+    font-weight: 600;
+    color: #475569;
+    font-size: .8em;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    background: rgba(148, 163, 184, 0.08);
+  }
+  .loop-table code { font-size: .85em; color: #64748b; }
+  .loop-thumb {
+    width: 80px;
+    height: 54px;
+    object-fit: cover;
+    border-radius: 4px;
+    display: block;
+    margin-bottom: .2em;
+  }
+  .truth-pos, .pred-pos { color: #ea580c; font-weight: 500; }
+  .truth-neg, .pred-neg { color: #16a34a; font-weight: 500; }
+  .result { font-weight: 600; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85em; }
+  .result-ok { color: #16a34a; }
+  .result-fp { color: #ea580c; }
+  .result-fn { color: #dc2626; }
+  .result-err { color: #dc2626; font-size: .75em; }
+  .loop-history {
+    margin-top: 1.5em;
+    font-size: .85em;
+  }
+  .loop-history h3 {
+    font-size: .85em;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #64748b;
+    margin: 0 0 .5em;
+  }
+  .loop-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .85em;
+  }
+  .loop-history-table th, .loop-history-table td {
+    padding: .3em .5em;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    text-align: left;
+  }
+  .loop-history-table td.prompt { max-width: 400px; white-space: pre-wrap; word-wrap: break-word; }
+  .loop-history-table tr.best { background: rgba(37, 99, 235, 0.08); }
+
+  .dataset-info {
+    background: rgba(148, 163, 184, 0.08);
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: .8em 1em;
+    font-size: .9em;
+    margin: .8em 0 1em;
+    line-height: 1.7;
+  }
+  .dataset-info strong { color: #475569; font-weight: 600; }
+  .dataset-info code {
+    background: rgba(0,0,0,0.05);
+    padding: 0 .3em;
+    border-radius: 3px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .dataset-filter {
+    display: flex;
+    gap: 1em;
+    margin: .8em 0;
+    font-size: .9em;
+    color: #475569;
+    flex-wrap: wrap;
+  }
+  .dataset-filter label { cursor: pointer; user-select: none; }
+  .dataset-filter input { margin-right: .3em; }
+  .dataset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: .5em;
+    margin: 1em 0;
+  }
+  .dataset-grid .empty {
+    grid-column: 1 / -1;
+    color: #94a3b8;
+    font-style: italic;
+    padding: 1em;
+    text-align: center;
+  }
+  .ds-card {
+    position: relative;
+    aspect-ratio: 16/9;
+    border: 3px solid transparent;
+    border-radius: 6px;
+    overflow: hidden;
+    background: rgba(0,0,0,0.05);
+    transition: transform .1s;
+  }
+  .ds-card:hover { transform: translateY(-1px); }
+  .ds-card.positive { border-color: #16a34a; }
+  .ds-card.signalisation { border-color: #f97316; }
+  .ds-card.negative { border-color: #2563eb; }
+  .ds-card.skip { border-color: #f59e0b; opacity: .65; }
+  .ds-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ds-card .boxes-badge {
+    position: absolute; top: 4px; left: 4px;
+    background: rgba(37, 99, 235, 0.9);
+    color: white;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: .7em;
+    font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .ds-card .decision-label {
+    position: absolute; top: 4px; right: 4px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: .7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: white;
+  }
+  .ds-card.positive .decision-label { background: #16a34a; }
+  .ds-card.signalisation .decision-label { background: #f97316; }
+  .ds-card.negative .decision-label { background: #2563eb; }
+  .ds-card.skip .decision-label { background: #f59e0b; color: #1e293b; }
+  .ds-card .ts {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    font-size: .7em;
+    padding: 2px 5px;
+    text-align: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .ds-actions {
+    position: absolute; inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .3em;
+    background: rgba(0,0,0,0.5);
+    opacity: 0;
+    transition: opacity .15s;
+    pointer-events: none;
+  }
+  .ds-card:hover .ds-actions { opacity: 1; }
+  .ds-actions button {
+    padding: .3em .6em;
+    font-size: .75em;
+    font-weight: 600;
+    background: white;
+    color: #1e293b;
+    border: 0;
+    pointer-events: auto;
+    cursor: pointer;
+  }
+  .ds-actions button.positive { background: #16a34a; color: white; }
+  .ds-actions button.signalisation { background: #f97316; color: white; }
+  .ds-actions button.negative { background: #2563eb; color: white; }
+  .ds-actions button.skip { background: #f59e0b; color: #1e293b; }
+  .ds-actions button.reset { background: #64748b; color: white; }
+
+  .ds-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.88);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 2em;
+  }
+  .ds-modal.open { display: flex; }
+  .ds-modal-content {
+    position: relative;
+    max-width: 100%;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .8em;
+  }
+  .ds-modal-image-wrap {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+    max-width: 90vw;
+    max-height: 70vh;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  }
+  .ds-modal-image-wrap img {
+    display: block;
+    max-width: 90vw;
+    max-height: 70vh;
+    object-fit: contain;
+  }
+  .ds-modal-image-wrap canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+  }
+  .ds-modal-bar {
+    display: flex;
+    gap: .6em;
+    align-items: center;
+    background: rgba(30, 41, 59, 0.85);
+    padding: .6em 1em;
+    border-radius: 8px;
+    color: white;
+    font-size: .9em;
+    flex-wrap: wrap;
+  }
+  .ds-modal-bbox-bar {
+    font-size: .82em;
+    padding: .4em .9em;
+    background: rgba(30, 41, 59, 0.7);
+  }
+  .ds-modal-bbox-bar button {
+    padding: .3em .7em;
+    font-size: .85em;
+    font-weight: 500;
+    background: #475569;
+    color: white;
+    border: 0;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .ds-modal-bbox-bar button:hover { background: #334155; }
+  .ds-modal-bbox-bar .bbox-counts {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #cbd5e1;
+    margin-left: auto;
+    font-size: .85em;
+  }
+  .bbox-swatch {
+    display: inline-block;
+    width: 14px;
+    height: 10px;
+    vertical-align: middle;
+    margin-right: .3em;
+    border-radius: 2px;
+  }
+  .bbox-swatch.pseudo { border: 2px dashed #60a5fa; background: transparent; }
+  .bbox-swatch.user   { background: #16a34a; }
+
+  .ds-pager {
+    display: flex;
+    gap: .5em;
+    align-items: center;
+    justify-content: center;
+    margin: 1em 0;
+    font-size: .9em;
+  }
+  .ds-pager button {
+    padding: .4em .9em;
+    background: #475569;
+    color: white;
+    border: 0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .ds-pager button:hover:not(:disabled) { background: #334155; }
+  .ds-pager button:disabled { opacity: .35; cursor: default; }
+  .ds-pager .page-info {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #64748b;
+    min-width: 16em;
+    text-align: center;
+  }
+  .ds-pending-badge {
+    display: inline-block;
+    background: #f59e0b;
+    color: #1e293b;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: .75em;
+    font-weight: 600;
+    margin-left: .5em;
+  }
+  .ds-modal-bar .info {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .85em;
+    margin-right: .5em;
+    color: #e2e8f0;
+  }
+  .ds-modal-bar .hint {
+    color: #94a3b8;
+    font-size: .78em;
+    margin-left: .5em;
+  }
+  .ds-modal-bar button {
+    padding: .4em .9em;
+    font-size: .9em;
+    font-weight: 600;
+    border: 0;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  .ds-modal-bar button.positive { background: #16a34a; color: white; }
+  .ds-modal-bar button.signalisation { background: #f97316; color: white; }
+  .ds-modal-bar button.negative { background: #2563eb; color: white; }
+  .ds-modal-bar button.skip { background: #f59e0b; color: #1e293b; }
+  .ds-modal-bar button.reset { background: #64748b; color: white; }
+  .ds-modal-bar button:hover:not(:disabled) { filter: brightness(1.1); }
+  .ds-modal-close {
+    position: absolute;
+    top: -2.5em;
+    right: 0;
+    background: transparent;
+    color: white;
+    font-size: 1.6em;
+    line-height: 1;
+    border: 0;
+    padding: .2em .4em;
+    cursor: pointer;
+  }
+  .ds-modal-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+    font-size: 1.8em;
+    width: 2em;
+    height: 2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 0;
+  }
+  .ds-modal-nav:hover:not(:disabled) { background: rgba(255, 255, 255, 0.22); }
+  .ds-modal-nav:disabled { opacity: .3; cursor: default; }
+  .ds-modal-prev { left: 1em; }
+  .ds-modal-next { right: 1em; }
+  .ds-card { cursor: zoom-in; }
 </style>
 </head>
 <body>
@@ -296,6 +698,7 @@
     <button data-tab="detect" class="active">Détection</button>
     <button data-tab="chat">Chat</button>
     <button data-tab="loop">Boucle</button>
+    <button data-tab="dataset">Dataset</button>
   </nav>
 
   <!-- ========== Onglet Détection ========== -->
@@ -364,9 +767,130 @@
       <div class="content"><em>Chargement…</em></div>
     </details>
 
-    <div class="placeholder">
-      <h2>Boucle de rétroaction</h2>
-      <p>À venir — itération de prompts sur le set de validation, mode éditeur puis automatique.</p>
+    <p class="hint">Mode éditeur : édite le prompt, lance le batch sur les 20 images ROADWork, mesure rappel/précision/F1. Critère : ≥1 boîte détectée ⇒ « chantier ».</p>
+
+    <textarea id="loopPrompt" class="loop-prompt" placeholder="Prompt de détection">Chantier?</textarea>
+
+    <div class="controls">
+      <button id="loopRun">Lancer le batch (20 images)</button>
+      <button id="loopStop" class="secondary" disabled>Arrêter</button>
+    </div>
+
+    <div id="loopStatus"></div>
+
+    <div class="loop-metrics" id="loopMetrics"></div>
+
+    <table class="loop-table" id="loopTable">
+      <thead>
+        <tr>
+          <th>Image</th>
+          <th>Vérité</th>
+          <th>Boîtes</th>
+          <th>Prédiction</th>
+          <th>Résultat</th>
+          <th>Temps</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="loop-history" id="loopHistoryBlock" style="display:none">
+      <h3>Historique des runs</h3>
+      <table class="loop-history-table" id="loopHistory">
+        <thead>
+          <tr>
+            <th>Modèle</th>
+            <th>Prompt</th>
+            <th>Rappel</th>
+            <th>Précision</th>
+            <th>F1</th>
+            <th>Temps moy.</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========== Onglet Dataset ========== -->
+  <section id="panel-dataset" class="panel">
+    <details class="system-prompt" id="sysDataset">
+      <summary>System prompt envoyé au modèle</summary>
+      <div class="content"><em>Chargement…</em></div>
+    </details>
+
+    <p class="hint">Dataset builder : Gemma pré-annote les frames d'une vidéo via <code>annotate_video.py</code>. Tu valides en quatre classes : <strong>chantier</strong> (travaux actifs, <code>has_construction=true</code>), <strong>signalisation</strong> (panneaux/cônes/barrières sans activité), <strong>sans</strong> (rien) ou <strong>skip</strong> (ambigu, exclu). Chantier, signalisation et sans sont exportés dans <code>data/samples/</code> avec un champ <code>category</code>.</p>
+
+    <div class="controls">
+      <label>Vidéo&nbsp;: <select id="datasetVideo"></select></label>
+      <button id="datasetReload" class="secondary">Recharger</button>
+    </div>
+
+    <div id="datasetInfo" class="dataset-info"><em>Chargement…</em></div>
+
+    <div class="dataset-filter">
+      <label><input type="radio" name="dsFilter" value="candidates" checked> Candidats positifs</label>
+      <label><input type="radio" name="dsFilter" value="positives-isolated"> Positifs isolés (rejetés par smoothing)</label>
+      <label><input type="radio" name="dsFilter" value="non-candidates"> Non-candidats (pour négatifs)</label>
+      <label><input type="radio" name="dsFilter" value="all"> Toutes</label>
+      <label><input type="radio" name="dsFilter" value="positive"> Chantier</label>
+      <label><input type="radio" name="dsFilter" value="signalisation"> Signalisation</label>
+      <label><input type="radio" name="dsFilter" value="negative"> Sans</label>
+      <label><input type="radio" name="dsFilter" value="skip"> Skip</label>
+      <label><input type="radio" name="dsFilter" value="pending"> En attente</label>
+    </div>
+
+    <div id="dsSampleControl" class="dataset-filter" style="display:none">
+      <label>Échantillon aléatoire :
+        <select id="dsSampleSize">
+          <option value="50">50</option>
+          <option value="100" selected>100</option>
+          <option value="200">200</option>
+          <option value="500">500</option>
+          <option value="all">tout</option>
+        </select>
+      </label>
+      <label title="Change la graine pour tirer un autre échantillon">
+        <button id="dsReshuffle" class="secondary" style="padding:.3em .8em; font-size:.85em">Re-tirer</button>
+      </label>
+    </div>
+
+    <div id="datasetGrid" class="dataset-grid"></div>
+    <div id="datasetPager" class="ds-pager"></div>
+
+    <div class="controls">
+      <button id="datasetExport" disabled>Exporter les gardées</button>
+      <button id="datasetFlush" class="secondary" style="display:none">Sauvegarder maintenant</button>
+    </div>
+    <div id="datasetStatus"></div>
+
+    <div class="ds-modal" id="dsModal" aria-hidden="true">
+      <button class="ds-modal-nav ds-modal-prev" id="dsModalPrev" title="Précédente (←)">‹</button>
+      <div class="ds-modal-content">
+        <button class="ds-modal-close" id="dsModalClose" title="Fermer (Échap)">✕</button>
+        <div class="ds-modal-image-wrap">
+          <img id="dsModalImg" alt="">
+          <canvas id="dsModalCanvas"></canvas>
+        </div>
+        <div class="ds-modal-bar">
+          <span class="info" id="dsModalInfo"></span>
+          <button class="positive" id="dsModalPositive">Chantier</button>
+          <button class="signalisation" id="dsModalSignalisation">Signalisation</button>
+          <button class="negative" id="dsModalNegative">Sans</button>
+          <button class="skip" id="dsModalSkip">Skip</button>
+          <button class="reset" id="dsModalReset">Annuler</button>
+          <span class="hint">C = chantier · G = signalisation · N = sans · S = skip · A = annuler · ← → = navigation</span>
+        </div>
+        <div class="ds-modal-bar ds-modal-bbox-bar">
+          <span><span class="bbox-swatch pseudo"></span>pseudo-Gemma</span>
+          <span><span class="bbox-swatch user"></span>mes bboxes (dessinées)</span>
+          <button id="dsBboxImport" title="Copier les bboxes Gemma en bboxes humaines">Importer Gemma</button>
+          <button id="dsBboxUndo" title="Supprimer la dernière bbox dessinée">Supprimer dernière</button>
+          <button id="dsBboxClear" title="Effacer toutes mes bboxes">Tout effacer</button>
+          <span class="bbox-counts" id="dsBboxCounts"></span>
+        </div>
+      </div>
+      <button class="ds-modal-nav ds-modal-next" id="dsModalNext" title="Suivante (→)">›</button>
     </div>
   </section>
 
@@ -750,6 +1274,830 @@ chatClear.addEventListener('click', () => {
   renderChat();
   setChatStatus('');
 });
+
+/* ========== Boucle — mode éditeur ========== */
+const loopPrompt = $('loopPrompt');
+const loopRun = $('loopRun');
+const loopStop = $('loopStop');
+const loopStatus = $('loopStatus');
+const loopMetrics = $('loopMetrics');
+const loopTableBody = $('loopTable').querySelector('tbody');
+const loopHistoryBlock = $('loopHistoryBlock');
+const loopHistoryBody = $('loopHistory').querySelector('tbody');
+
+let samplesCache = null;
+let loopAbort = false;
+const loopRuns = [];
+
+function setLoopStatus(msg, isError = false) {
+  loopStatus.textContent = msg;
+  loopStatus.classList.toggle('error', isError);
+}
+
+async function getSamples() {
+  if (samplesCache) return samplesCache;
+  const r = await fetch('/samples/manifest.json');
+  if (!r.ok) throw new Error('manifest.json introuvable (lance fetch_sample.py)');
+  const data = await r.json();
+  samplesCache = data.samples || [];
+  return samplesCache;
+}
+
+async function sampleToDataUrl(filename) {
+  const r = await fetch('/samples/' + filename);
+  if (!r.ok) throw new Error('Image introuvable: ' + filename);
+  const blob = await r.blob();
+  const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
+  const { dataUrl } = await loadImageFile(file);
+  return dataUrl;
+}
+
+function fmtPct(x) { return (x * 100).toFixed(0) + '%'; }
+
+function renderMetrics(m) {
+  loopMetrics.innerHTML = `
+    <div class="metric highlight">
+      <div class="metric-label">Rappel</div>
+      <div class="metric-val">${fmtPct(m.recall)}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Précision</div>
+      <div class="metric-val">${fmtPct(m.precision)}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">F1</div>
+      <div class="metric-val">${fmtPct(m.f1)}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Temps moyen</div>
+      <div class="metric-val">${m.avgElapsed.toFixed(1)}s</div>
+    </div>
+    <div class="metric-details">
+      TP ${m.tp} · FP ${m.fp} · FN ${m.fn} · TN ${m.tn} · batch ${m.batchElapsed.toFixed(1)}s
+    </div>
+  `;
+}
+
+function renderHistory() {
+  if (!loopRuns.length) { loopHistoryBlock.style.display = 'none'; return; }
+  loopHistoryBlock.style.display = '';
+  const bestF1 = Math.max(...loopRuns.map(r => r.f1));
+  loopHistoryBody.innerHTML = '';
+  loopRuns.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    if (r.f1 === bestF1) tr.className = 'best';
+    tr.innerHTML = `
+      <td>${r.model}</td>
+      <td class="prompt">${escapeHtml(r.prompt)}</td>
+      <td>${fmtPct(r.recall)}</td>
+      <td>${fmtPct(r.precision)}</td>
+      <td>${fmtPct(r.f1)}</td>
+      <td>${r.avgElapsed.toFixed(1)}s</td>
+    `;
+    loopHistoryBody.appendChild(tr);
+  });
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function buildRow(sample) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>
+      <img src="/samples/${sample.file}" class="loop-thumb" alt="${sample.file}">
+      <code>${sample.file}</code>
+    </td>
+    <td class="${sample.has_construction ? 'truth-pos' : 'truth-neg'}">
+      ${sample.has_construction ? 'chantier' : 'sans'}
+    </td>
+    <td class="nboxes">—</td>
+    <td class="pred">—</td>
+    <td class="result">—</td>
+    <td class="elapsed">—</td>
+  `;
+  return tr;
+}
+
+async function runBatch() {
+  const prompt = loopPrompt.value.trim() || 'Chantier?';
+  const model = getActiveModel();
+
+  let samples;
+  try {
+    samples = await getSamples();
+  } catch (err) {
+    setLoopStatus('Erreur : ' + err.message, true);
+    return;
+  }
+
+  loopAbort = false;
+  loopRun.disabled = true;
+  loopStop.disabled = false;
+  loopMetrics.innerHTML = '';
+  loopTableBody.innerHTML = '';
+
+  const rows = samples.map(s => {
+    const tr = buildRow(s);
+    loopTableBody.appendChild(tr);
+    return { sample: s, tr };
+  });
+
+  let tp = 0, fp = 0, fn = 0, tn = 0, totalElapsed = 0, done = 0;
+  const startBatch = performance.now();
+
+  for (let i = 0; i < rows.length; i++) {
+    if (loopAbort) {
+      setLoopStatus(`Batch arrêté à ${i}/${rows.length}`);
+      break;
+    }
+    const { sample, tr } = rows[i];
+    setLoopStatus(`Traitement ${i + 1}/${rows.length} — ${sample.file} [${model}]`);
+    try {
+      const dataUrl = await sampleToDataUrl(sample.file);
+      const r = await fetch('/detect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_b64: dataUrl, prompt, model })
+      });
+      if (!r.ok) throw new Error(await r.text());
+      const data = await r.json();
+      const nBoxes = (data.detections || []).length;
+      const predicted = nBoxes > 0;
+      const truth = sample.has_construction;
+
+      let result, resultClass;
+      if (predicted && truth) { tp++; result = 'TP'; resultClass = 'result-ok'; }
+      else if (!predicted && !truth) { tn++; result = 'TN'; resultClass = 'result-ok'; }
+      else if (predicted && !truth) { fp++; result = 'FP'; resultClass = 'result-fp'; }
+      else { fn++; result = 'FN'; resultClass = 'result-fn'; }
+
+      totalElapsed += data.elapsed || 0;
+      done++;
+
+      tr.querySelector('.nboxes').textContent = nBoxes;
+      const predCell = tr.querySelector('.pred');
+      predCell.textContent = predicted ? 'chantier' : 'sans';
+      predCell.className = 'pred ' + (predicted ? 'pred-pos' : 'pred-neg');
+      const resCell = tr.querySelector('.result');
+      resCell.textContent = result;
+      resCell.className = 'result ' + resultClass;
+      tr.querySelector('.elapsed').textContent = (data.elapsed || 0).toFixed(1) + 's';
+    } catch (err) {
+      const resCell = tr.querySelector('.result');
+      resCell.textContent = 'Erreur';
+      resCell.title = err.message;
+      resCell.className = 'result result-err';
+    }
+  }
+
+  const batchElapsed = (performance.now() - startBatch) / 1000;
+  const recall = (tp + fn) > 0 ? tp / (tp + fn) : 0;
+  const precision = (tp + fp) > 0 ? tp / (tp + fp) : 0;
+  const f1 = (precision + recall) > 0 ? 2 * precision * recall / (precision + recall) : 0;
+  const avgElapsed = done > 0 ? totalElapsed / done : 0;
+
+  renderMetrics({ tp, fp, fn, tn, recall, precision, f1, avgElapsed, batchElapsed });
+
+  if (done === rows.length) {
+    loopRuns.push({ model, prompt, recall, precision, f1, avgElapsed });
+    renderHistory();
+    setLoopStatus(`Batch terminé en ${batchElapsed.toFixed(1)}s`);
+  }
+
+  loopRun.disabled = false;
+  loopStop.disabled = true;
+}
+
+loopRun.addEventListener('click', runBatch);
+loopStop.addEventListener('click', () => { loopAbort = true; });
+
+/* ========== Dataset builder ========== */
+const dsVideoSel = $('datasetVideo');
+const dsGrid = $('datasetGrid');
+const dsInfo = $('datasetInfo');
+const dsExport = $('datasetExport');
+const dsStatus = $('datasetStatus');
+let dsCurrentVideo = null;
+let dsAnnotations = null;
+let dsFilterMode = 'candidates';
+let dsVisibleFrames = [];      // page actuelle (ce qui est rendu)
+let dsFilteredFrames = [];     // résultat du filtre, avant pagination
+let dsCurrentPage = 0;
+let dsSampleSeed = 42;
+let dsModalIdx = -1;
+let dsModalPseudoBoxes = [];
+let dsModalUserBoxes = [];
+let dsDrawState = null;
+
+const DS_PAGE_SIZE = 100;
+
+/* ---- Batch-save client ---- */
+const dsPendingSaves = new Map();  // frame → {decision, boxes?}
+let dsFlushTimer = null;
+let dsInFlight = false;
+
+function updatePendingBadge() {
+  const n = dsPendingSaves.size;
+  const btn = $('datasetFlush');
+  if (n > 0) {
+    btn.style.display = '';
+    btn.textContent = `Sauvegarder maintenant (${n})`;
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+function scheduleFlush(delay = 2000) {
+  if (dsFlushTimer) clearTimeout(dsFlushTimer);
+  dsFlushTimer = setTimeout(() => flushSaves(), delay);
+}
+
+async function flushSaves() {
+  if (dsFlushTimer) { clearTimeout(dsFlushTimer); dsFlushTimer = null; }
+  if (dsPendingSaves.size === 0 || dsInFlight) return;
+  const snapshot = new Map(dsPendingSaves);
+  dsPendingSaves.clear();
+  updatePendingBadge();
+  const items = [];
+  for (const [frame, entry] of snapshot) items.push({ frame, ...entry });
+  dsInFlight = true;
+  try {
+    const r = await fetch(
+      `/videos/${encodeURIComponent(dsCurrentVideo)}/validations/batch`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items })
+      }
+    );
+    if (!r.ok) throw new Error(await r.text());
+  } catch (err) {
+    // Replace pending with what we tried (frame-wise, without écraser de nouvelles modifs)
+    for (const [f, e] of snapshot) if (!dsPendingSaves.has(f)) dsPendingSaves.set(f, e);
+    updatePendingBadge();
+    setDsStatus('Erreur batch-save : ' + err.message, true);
+  } finally {
+    dsInFlight = false;
+  }
+}
+
+// Flush synchrone best-effort à la fermeture de l'onglet
+window.addEventListener('beforeunload', () => {
+  if (dsPendingSaves.size === 0) return;
+  const items = [];
+  for (const [frame, entry] of dsPendingSaves) items.push({ frame, ...entry });
+  const blob = new Blob(
+    [JSON.stringify({ items })],
+    { type: 'application/json' }
+  );
+  navigator.sendBeacon(
+    `/videos/${encodeURIComponent(dsCurrentVideo)}/validations/batch`,
+    blob
+  );
+});
+
+/* ---- Sampling seedé (Mulberry32) ---- */
+function seededRandom(seed) {
+  return function() {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = seed;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function stableSample(arr, n, seed) {
+  if (n >= arr.length) return arr;
+  const indexed = arr.map((v, i) => [v, i]);
+  const rng = seededRandom(seed);
+  for (let i = indexed.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [indexed[i], indexed[j]] = [indexed[j], indexed[i]];
+  }
+  return indexed.slice(0, n).sort((a, b) => a[1] - b[1]).map(x => x[0]);
+}
+
+function setDsStatus(msg, isError = false) {
+  dsStatus.textContent = msg;
+  dsStatus.classList.toggle('error', isError);
+}
+
+async function loadDatasetVideos() {
+  try {
+    const r = await fetch('/videos');
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    dsVideoSel.innerHTML = '';
+    if (!data.videos.length) {
+      dsInfo.innerHTML = '<em>Aucune vidéo. Lance <code>python3 fetch_video.py &lt;url&gt;</code>.</em>';
+      dsGrid.innerHTML = '';
+      return;
+    }
+    for (const v of data.videos) {
+      const opt = document.createElement('option');
+      opt.value = v.name;
+      const ann = v.has_annotations
+        ? ` · ${v.n_candidates} candidat(s)`
+        : ' · pas annotée';
+      opt.textContent = `${v.name} · ${v.n_frames} frames${ann}`;
+      dsVideoSel.appendChild(opt);
+    }
+    dsVideoSel.value = data.videos[0].name;
+    await loadDatasetVideo(data.videos[0].name);
+  } catch (err) {
+    setDsStatus('Erreur : ' + err.message, true);
+  }
+}
+
+async function loadDatasetVideo(name) {
+  dsCurrentVideo = name;
+  dsAnnotations = null;
+  dsGrid.innerHTML = '';
+  dsExport.disabled = true;
+  try {
+    const r = await fetch(`/videos/${encodeURIComponent(name)}/annotations`);
+    if (!r.ok) {
+      dsInfo.innerHTML = `<em>Pas d'annotations pour <code>${name}</code>. Lance <code>python3 annotate_video.py ${name}</code>.</em>`;
+      return;
+    }
+    dsAnnotations = await r.json();
+    renderDsInfo();
+    renderDsGrid();
+  } catch (err) {
+    setDsStatus('Erreur : ' + err.message, true);
+  }
+}
+
+function dsCounts() {
+  const v = (dsAnnotations && dsAnnotations.validations) || {};
+  let positive = 0, signalisation = 0, negative = 0, skip = 0;
+  for (const e of Object.values(v)) {
+    if (e.decision === 'positive') positive++;
+    else if (e.decision === 'signalisation') signalisation++;
+    else if (e.decision === 'negative') negative++;
+    else if (e.decision === 'skip') skip++;
+  }
+  return { positive, signalisation, negative, skip };
+}
+
+function renderDsInfo() {
+  const a = dsAnnotations;
+  if (!a) return;
+  const c = dsCounts();
+  const pctRaw = a.n_frames ? Math.round(a.n_positive_raw / a.n_frames * 100) : 0;
+  dsInfo.innerHTML = `
+    <strong>Modèle</strong> ${a.model} ·
+    <strong>Prompt</strong> <code>${escapeHtml(a.prompt)}</code> ·
+    <strong>Smoothing</strong> ${a.smoothing.threshold}/${a.smoothing.window}<br>
+    <strong>Frames</strong> ${a.n_frames} ·
+    <strong>Positives brutes</strong> ${a.n_positive_raw} (${pctRaw}%) ·
+    <strong>Après smoothing</strong> ${a.n_positive_smoothed} ·
+    <strong>Segments</strong> ${a.n_segments} ·
+    <strong>Candidats positifs</strong> ${a.n_candidates}<br>
+    <strong>Chantier</strong> ${c.positive} ·
+    <strong>Signalisation</strong> ${c.signalisation} ·
+    <strong>Sans</strong> ${c.negative} ·
+    <strong>Skip</strong> ${c.skip} ·
+    <strong>Parse errors</strong> ${a.parse_errors} ·
+    <strong>Temps moy.</strong> ${a.avg_elapsed.toFixed(1)}s
+  `;
+  const total = c.positive + c.signalisation + c.negative;
+  dsExport.disabled = total === 0;
+  dsExport.textContent = total > 0
+    ? `Exporter ${c.positive} chantier + ${c.signalisation} signal + ${c.negative} sans → data/samples/`
+    : 'Exporter les décisions';
+}
+
+function renderDsGrid() {
+  const a = dsAnnotations;
+  if (!a) { dsGrid.innerHTML = ''; $('datasetPager').innerHTML = ''; return; }
+  const candidateSet = new Set(a.candidates);
+  const validations = a.validations || {};
+  const decOf = (f) => (validations[f.frame] && validations[f.frame].decision) || null;
+
+  let frames;
+  if (dsFilterMode === 'all') {
+    frames = a.per_frame;
+  } else if (dsFilterMode === 'candidates') {
+    frames = a.per_frame.filter(f => candidateSet.has(f.frame));
+  } else if (dsFilterMode === 'positives-isolated') {
+    frames = a.per_frame.filter(f => f.positive && !candidateSet.has(f.frame));
+  } else if (dsFilterMode === 'non-candidates') {
+    frames = a.per_frame.filter(f => !candidateSet.has(f.frame) && !f.parse_error);
+  } else if (dsFilterMode === 'pending') {
+    frames = a.per_frame.filter(f => candidateSet.has(f.frame) && !decOf(f));
+  } else {
+    // positive, negative, skip
+    frames = a.per_frame.filter(f => decOf(f) === dsFilterMode);
+  }
+
+  // Sampling (activé pour les filtres "non-candidates" et "all" si gros)
+  const sampleSelect = $('dsSampleSize');
+  const sampleCtrl = $('dsSampleControl');
+  const samplingApplies = ['non-candidates', 'all'].includes(dsFilterMode);
+  sampleCtrl.style.display = samplingApplies ? '' : 'none';
+  if (samplingApplies) {
+    const v = sampleSelect.value;
+    if (v !== 'all') frames = stableSample(frames, parseInt(v, 10), dsSampleSeed);
+  }
+
+  dsFilteredFrames = frames;
+  // Clamp page
+  const maxPage = Math.max(0, Math.ceil(frames.length / DS_PAGE_SIZE) - 1);
+  if (dsCurrentPage > maxPage) dsCurrentPage = maxPage;
+  const start = dsCurrentPage * DS_PAGE_SIZE;
+  const end = start + DS_PAGE_SIZE;
+  const pageFrames = frames.slice(start, end);
+
+  dsGrid.innerHTML = '';
+  dsVisibleFrames = pageFrames;
+  renderDsPager(frames.length);
+  if (!frames.length) {
+    dsGrid.innerHTML = '<div class="empty">Aucune frame dans ce filtre.</div>';
+    return;
+  }
+
+  const decLabel = {
+    positive: 'chantier',
+    signalisation: 'signal',
+    negative: 'sans',
+    skip: 'skip'
+  };
+  pageFrames.forEach((f, idx) => {
+    const decision = validations[f.frame] && validations[f.frame].decision;
+    const card = document.createElement('div');
+    card.className = 'ds-card' + (decision ? ' ' + decision : '');
+    card.dataset.frame = f.frame;
+    card.innerHTML = `
+      <img src="/video-frames/${encodeURIComponent(dsCurrentVideo)}/frames/${f.frame}" loading="lazy">
+      <span class="boxes-badge">${f.n_boxes} box${f.n_boxes === 1 ? '' : 'es'}</span>
+      ${decision ? `<span class="decision-label">${decLabel[decision] || decision}</span>` : ''}
+      <span class="ts">t=${f.ts.toFixed(1)}s</span>
+      <div class="ds-actions">
+        <button class="positive" data-action="positive" title="Chantier (C)">Chantier</button>
+        <button class="signalisation" data-action="signalisation" title="Signalisation seule (G)">Signal.</button>
+        <button class="negative" data-action="negative" title="Sans chantier (N)">Sans</button>
+        <button class="skip" data-action="skip" title="Ambigu, exclu (S)">Skip</button>
+        <button class="reset" data-action="reset" title="Annuler (A)">↺</button>
+      </div>
+    `;
+    card.querySelectorAll('.ds-actions button').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await markDsFrame(f.frame, btn.dataset.action);
+      });
+    });
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.ds-actions')) return;
+      openDsModal(idx);
+    });
+    dsGrid.appendChild(card);
+  });
+}
+
+function markDsFrame(frame, decision, boxes) {
+  // Update optimiste côté client (instantané)
+  if (!dsAnnotations.validations) dsAnnotations.validations = {};
+  if (decision === 'reset') {
+    delete dsAnnotations.validations[frame];
+  } else {
+    const entry = { decision, at: new Date().toISOString() };
+    if (boxes && boxes.length) entry.boxes = boxes;
+    dsAnnotations.validations[frame] = entry;
+  }
+  // Queue pour batch-save
+  const queueEntry = { decision };
+  if (boxes && boxes.length) queueEntry.boxes = boxes;
+  dsPendingSaves.set(frame, queueEntry);
+  updatePendingBadge();
+  scheduleFlush();
+  renderDsInfo();
+  renderDsGrid();
+}
+
+async function exportDsKept() {
+  if (!dsCurrentVideo) return;
+  const c = dsCounts();
+  if (!confirm(`Exporter ${c.keep} frame(s) vers data/samples/ ? Les fichiers seront préfixés par \`dashcam_${dsCurrentVideo}_\`.`)) return;
+  dsExport.disabled = true;
+  setDsStatus('Export en cours…');
+  try {
+    const r = await fetch(`/videos/${encodeURIComponent(dsCurrentVideo)}/export`, { method: 'POST' });
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    setDsStatus(`${data.added} frame(s) ajoutée(s) à data/samples/.`);
+  } catch (err) {
+    setDsStatus('Erreur : ' + err.message, true);
+  } finally {
+    dsExport.disabled = false;
+  }
+}
+
+function renderDsPager(total) {
+  const pager = $('datasetPager');
+  if (total <= DS_PAGE_SIZE) { pager.innerHTML = ''; return; }
+  const maxPage = Math.ceil(total / DS_PAGE_SIZE) - 1;
+  const start = dsCurrentPage * DS_PAGE_SIZE + 1;
+  const end = Math.min(total, (dsCurrentPage + 1) * DS_PAGE_SIZE);
+  pager.innerHTML = `
+    <button id="pgFirst" ${dsCurrentPage === 0 ? 'disabled' : ''}>«</button>
+    <button id="pgPrev"  ${dsCurrentPage === 0 ? 'disabled' : ''}>←</button>
+    <span class="page-info">Page ${dsCurrentPage + 1} / ${maxPage + 1} — ${start}–${end} sur ${total}</span>
+    <button id="pgNext"  ${dsCurrentPage === maxPage ? 'disabled' : ''}>→</button>
+    <button id="pgLast"  ${dsCurrentPage === maxPage ? 'disabled' : ''}>»</button>
+  `;
+  $('pgFirst').addEventListener('click', () => { dsCurrentPage = 0; renderDsGrid(); });
+  $('pgPrev').addEventListener('click',  () => { dsCurrentPage--;    renderDsGrid(); });
+  $('pgNext').addEventListener('click',  () => { dsCurrentPage++;    renderDsGrid(); });
+  $('pgLast').addEventListener('click',  () => { dsCurrentPage = maxPage; renderDsGrid(); });
+}
+
+dsVideoSel.addEventListener('change', async () => {
+  await flushSaves();
+  dsCurrentPage = 0;
+  loadDatasetVideo(dsVideoSel.value);
+});
+$('datasetReload').addEventListener('click', async () => {
+  await flushSaves();
+  if (dsCurrentVideo) loadDatasetVideo(dsCurrentVideo);
+  else loadDatasetVideos();
+});
+dsExport.addEventListener('click', async () => {
+  await flushSaves();
+  exportDsKept();
+});
+$('datasetFlush').addEventListener('click', flushSaves);
+document.querySelectorAll('input[name=dsFilter]').forEach(r => {
+  r.addEventListener('change', async (e) => {
+    dsFilterMode = e.target.value;
+    dsCurrentPage = 0;
+    renderDsGrid();
+  });
+});
+$('dsSampleSize').addEventListener('change', () => {
+  dsCurrentPage = 0;
+  renderDsGrid();
+});
+$('dsReshuffle').addEventListener('click', (e) => {
+  e.preventDefault();
+  dsSampleSeed = Math.floor(Math.random() * 1e9);
+  dsCurrentPage = 0;
+  renderDsGrid();
+});
+
+/* ========== Modal d'inspection des frames ========== */
+const dsModal = $('dsModal');
+const dsModalImg = $('dsModalImg');
+const dsModalInfo = $('dsModalInfo');
+const dsModalPrev = $('dsModalPrev');
+const dsModalNext = $('dsModalNext');
+const dsModalCanvas = $('dsModalCanvas');
+const dsBboxCounts = $('dsBboxCounts');
+
+function openDsModal(idx) {
+  if (!dsAnnotations) return;
+  if (idx < 0 || idx >= dsVisibleFrames.length) return;
+  dsModalIdx = idx;
+  const f = dsVisibleFrames[idx];
+  // Reset draw state
+  dsDrawState = null;
+  // Pseudo-boxes depuis per_frame (annotate_video)
+  dsModalPseudoBoxes = Array.isArray(f.detections) ? f.detections : [];
+  // User boxes depuis validations (si déjà enregistrées)
+  const v = (dsAnnotations.validations || {})[f.frame];
+  dsModalUserBoxes = (v && Array.isArray(v.boxes))
+    ? v.boxes.map(b => ({ box: [...b.box], label: b.label || 'chantier' }))
+    : [];
+  renderDsModal();
+  dsModal.classList.add('open');
+  dsModal.setAttribute('aria-hidden', 'false');
+}
+
+function renderDsModal() {
+  if (dsModalIdx < 0) return;
+  const f = dsVisibleFrames[dsModalIdx];
+  if (!f) return;
+  dsModalImg.src = `/video-frames/${encodeURIComponent(dsCurrentVideo)}/frames/${f.frame}`;
+  const validations = (dsAnnotations && dsAnnotations.validations) || {};
+  const dec = validations[f.frame] && validations[f.frame].decision;
+  const decLabel = dec === 'positive'
+    ? ' · CHANTIER'
+    : dec === 'signalisation'
+    ? ' · SIGNALISATION'
+    : dec === 'negative'
+    ? ' · SANS'
+    : dec === 'skip'
+    ? ' · SKIP'
+    : '';
+  dsModalInfo.textContent =
+    `${dsModalIdx + 1}/${dsVisibleFrames.length} · ${f.frame} · ` +
+    `t=${f.ts.toFixed(1)}s · ${f.n_boxes} box${decLabel}`;
+  dsModalPrev.disabled = dsModalIdx === 0;
+  dsModalNext.disabled = dsModalIdx === dsVisibleFrames.length - 1;
+  renderBboxCounts();
+}
+
+function renderBboxCounts() {
+  const p = dsModalPseudoBoxes.length;
+  const u = dsModalUserBoxes.length;
+  dsBboxCounts.textContent = `pseudo ${p} · mes bboxes ${u}`;
+}
+
+function sizeModalCanvas() {
+  if (!dsModalImg.naturalWidth) return;
+  dsModalCanvas.width = dsModalImg.naturalWidth;
+  dsModalCanvas.height = dsModalImg.naturalHeight;
+  drawModalOverlay();
+}
+
+function drawModalOverlay() {
+  const ctx = dsModalCanvas.getContext('2d');
+  const W = dsModalCanvas.width, H = dsModalCanvas.height;
+  if (!W || !H) return;
+  ctx.clearRect(0, 0, W, H);
+
+  // Pseudo-boxes (Gemma) : bleu pointillé
+  ctx.setLineDash([10, 5]);
+  ctx.strokeStyle = '#60a5fa';
+  ctx.lineWidth = Math.max(2, W / 400);
+  for (const d of dsModalPseudoBoxes) {
+    if (!Array.isArray(d.box) || d.box.length !== 4) continue;
+    const [y1, x1, y2, x2] = d.box.map(Number);
+    ctx.strokeRect(x1/1000*W, y1/1000*H, (x2-x1)/1000*W, (y2-y1)/1000*H);
+  }
+
+  // User boxes : vert plein
+  ctx.setLineDash([]);
+  ctx.strokeStyle = '#16a34a';
+  ctx.lineWidth = Math.max(3, W / 300);
+  for (const b of dsModalUserBoxes) {
+    const [y1, x1, y2, x2] = b.box.map(Number);
+    ctx.strokeRect(x1/1000*W, y1/1000*H, (x2-x1)/1000*W, (y2-y1)/1000*H);
+  }
+
+  // Bbox en cours de dessin
+  if (dsDrawState) {
+    ctx.strokeStyle = '#16a34a';
+    ctx.setLineDash([]);
+    ctx.lineWidth = Math.max(3, W / 300);
+    const x = Math.min(dsDrawState.x1, dsDrawState.x2);
+    const y = Math.min(dsDrawState.y1, dsDrawState.y2);
+    ctx.strokeRect(x, y, Math.abs(dsDrawState.x2 - dsDrawState.x1), Math.abs(dsDrawState.y2 - dsDrawState.y1));
+  }
+}
+
+function canvasCoord(e) {
+  const rect = dsModalCanvas.getBoundingClientRect();
+  const scaleX = dsModalCanvas.width / rect.width;
+  const scaleY = dsModalCanvas.height / rect.height;
+  return {
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top) * scaleY,
+  };
+}
+
+dsModalImg.addEventListener('load', sizeModalCanvas);
+window.addEventListener('resize', () => {
+  if (dsModal.classList.contains('open')) drawModalOverlay();
+});
+
+dsModalCanvas.addEventListener('mousedown', (e) => {
+  const { x, y } = canvasCoord(e);
+  dsDrawState = { x1: x, y1: y, x2: x, y2: y };
+});
+dsModalCanvas.addEventListener('mousemove', (e) => {
+  if (!dsDrawState) return;
+  const { x, y } = canvasCoord(e);
+  dsDrawState.x2 = x;
+  dsDrawState.y2 = y;
+  drawModalOverlay();
+});
+function finishDraw(e) {
+  if (!dsDrawState) return;
+  const W = dsModalCanvas.width, H = dsModalCanvas.height;
+  const dx = Math.abs(dsDrawState.x2 - dsDrawState.x1);
+  const dy = Math.abs(dsDrawState.y2 - dsDrawState.y1);
+  if (dx > W * 0.02 && dy > H * 0.02) {  // bbox minimale raisonnable
+    const x1 = Math.min(dsDrawState.x1, dsDrawState.x2) / W * 1000;
+    const x2 = Math.max(dsDrawState.x1, dsDrawState.x2) / W * 1000;
+    const y1 = Math.min(dsDrawState.y1, dsDrawState.y2) / H * 1000;
+    const y2 = Math.max(dsDrawState.y1, dsDrawState.y2) / H * 1000;
+    dsModalUserBoxes.push({ box: [y1, x1, y2, x2], label: 'chantier' });
+    renderBboxCounts();
+  }
+  dsDrawState = null;
+  drawModalOverlay();
+}
+dsModalCanvas.addEventListener('mouseup', finishDraw);
+dsModalCanvas.addEventListener('mouseleave', finishDraw);
+
+$('dsBboxImport').addEventListener('click', () => {
+  dsModalUserBoxes = dsModalPseudoBoxes.map(d => ({ box: [...d.box], label: d.label || 'chantier' }));
+  renderBboxCounts();
+  drawModalOverlay();
+});
+$('dsBboxUndo').addEventListener('click', () => {
+  dsModalUserBoxes.pop();
+  renderBboxCounts();
+  drawModalOverlay();
+});
+$('dsBboxClear').addEventListener('click', () => {
+  dsModalUserBoxes = [];
+  renderBboxCounts();
+  drawModalOverlay();
+});
+
+function closeDsModal() {
+  dsModal.classList.remove('open');
+  dsModal.setAttribute('aria-hidden', 'true');
+  dsModalIdx = -1;
+}
+
+function navigateDsModal(delta) {
+  const next = dsModalIdx + delta;
+  if (next < 0 || next >= dsVisibleFrames.length) return;
+  openDsModal(next);
+}
+
+async function dsModalDecide(decision, advance = true) {
+  if (dsModalIdx < 0) return;
+  const f = dsVisibleFrames[dsModalIdx];
+  // Bboxes de vérité-terrain : positif ET signalisation (pas pour sans/skip)
+  const boxes = (
+    (decision === 'positive' || decision === 'signalisation')
+    && dsModalUserBoxes.length > 0
+  ) ? dsModalUserBoxes : undefined;
+  await markDsFrame(f.frame, decision, boxes);
+  // markDsFrame déclenche renderDsGrid qui réécrit dsVisibleFrames
+  // selon le filtre courant. Si la frame courante sort du filtre, on cadre
+  // sur l'index équivalent (clampé).
+  if (dsModalIdx >= dsVisibleFrames.length) {
+    dsModalIdx = dsVisibleFrames.length - 1;
+  }
+  if (dsModalIdx < 0 || dsVisibleFrames.length === 0) {
+    closeDsModal();
+    return;
+  }
+  if (advance) {
+    // Avance vers la suivante non décidée si possible, sinon la suivante.
+    const validations = (dsAnnotations && dsAnnotations.validations) || {};
+    let nextIdx = -1;
+    for (let i = dsModalIdx + 1; i < dsVisibleFrames.length; i++) {
+      const f2 = dsVisibleFrames[i];
+      if (!validations[f2.frame]) { nextIdx = i; break; }
+    }
+    if (nextIdx === -1 && dsModalIdx + 1 < dsVisibleFrames.length) {
+      nextIdx = dsModalIdx + 1;
+    }
+    if (nextIdx !== -1) {
+      openDsModal(nextIdx);
+      return;
+    }
+  }
+  renderDsModal();
+}
+
+$('dsModalClose').addEventListener('click', closeDsModal);
+dsModal.addEventListener('click', (e) => {
+  if (e.target === dsModal) closeDsModal();
+});
+dsModalPrev.addEventListener('click', () => navigateDsModal(-1));
+dsModalNext.addEventListener('click', () => navigateDsModal(1));
+$('dsModalPositive').addEventListener('click', () => dsModalDecide('positive'));
+$('dsModalSignalisation').addEventListener('click', () => dsModalDecide('signalisation'));
+$('dsModalNegative').addEventListener('click', () => dsModalDecide('negative'));
+$('dsModalSkip').addEventListener('click', () => dsModalDecide('skip'));
+$('dsModalReset').addEventListener('click', () => dsModalDecide('reset', false));
+
+document.addEventListener('keydown', (e) => {
+  if (!dsModal.classList.contains('open')) return;
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'Escape') { e.preventDefault(); closeDsModal(); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); navigateDsModal(-1); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); navigateDsModal(1); }
+  else if (e.key === 'c' || e.key === 'C') { e.preventDefault(); dsModalDecide('positive'); }
+  else if (e.key === 'g' || e.key === 'G') { e.preventDefault(); dsModalDecide('signalisation'); }
+  else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); dsModalDecide('negative'); }
+  else if (e.key === 's' || e.key === 'S') { e.preventDefault(); dsModalDecide('skip'); }
+  else if (e.key === 'a' || e.key === 'A') { e.preventDefault(); dsModalDecide('reset', false); }
+  else if (e.key === 'Delete' || e.key === 'Backspace') {
+    e.preventDefault();
+    dsModalUserBoxes.pop();
+    renderBboxCounts();
+    drawModalOverlay();
+  }
+  else if (e.key === 'i' || e.key === 'I') {
+    e.preventDefault();
+    $('dsBboxImport').click();
+  }
+});
+
+loadDatasetVideos();
 </script>
 </body>
 </html>

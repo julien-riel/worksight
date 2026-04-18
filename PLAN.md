@@ -108,21 +108,60 @@ Trois appels Gemma par itération :
 
 ### Jour 2 — Mesure + mode éditeur
 
-**2.1 Vérité-terrain** (~30 min)
-- Annotation binaire manuelle des 20 images (chantier oui/non) → CSV
+**2.1 Vérité-terrain** ✅ *fait*
+- Les labels `has_construction` du `manifest.json` (issus de ROADWork) adoptés comme vérité-terrain — économie de 30 min, cohérence avec la source officielle.
 
-**2.2 Onglet "Boucle" — mode éditeur** (~2 h)
-- Run batch sur les 20 images avec un prompt donné
-- Affichage tableau : image, détections, vérité-terrain, match/miss
-- Édition manuelle des bboxes
-- Édition du prompt, bouton "Relancer"
-- Calcul et affichage rappel/précision/F1/temps
+**2.2 Onglet "Boucle" — mode éditeur** ✅ *fait*
+- Textarea prompt (défaut `Chantier?`) + bouton *Lancer le batch* + *Arrêter*
+- Run séquentiel sur les 20 images, progression en temps réel (`N/20`), le tableau se remplit au fil de l'eau
+- Critère binaire : **≥1 boîte détectée ⇒ chantier** (décidé d'un commun accord JOUR 2)
+- Métriques affichées : rappel, précision, F1, temps moyen (+ détail TP/FP/FN/TN)
+- Historique de tous les runs de la session (modèle, prompt, métriques) avec le meilleur F1 surligné
+- Édition manuelle des bboxes **non implémentée** — le critère binaire rend la correction bbox moins prioritaire pour la phase 1
 
-**2.3 Itération** (~1 h)
-- 5+ variantes de prompts testées via l'UI
-- Meilleur prompt sélectionné selon **rappel prioritaire**
+**2.3 Itération — file de prompts** ✅ *fait*
 
----
+Exécutée automatiquement via `run_iterations.py` — 12 runs (6 prompts × 2 modèles). Aucun prompt n'a coché le seuil strict **rappel ≥ 95 % ET précision ≥ 80 %**, mais le gagnant en est à 3 points.
+
+| # | Prompt | Hypothèse | À tester sur |
+|---|---|---|---|
+| 0 | `Chantier?` | baseline | Gemma + Claude |
+| 1 | `Chantier actif?` | ajoute la notion d'activité | Gemma + Claude |
+| 2 | `Travaux en cours?` | reformulation, insiste sur "en cours" | Gemma + Claude |
+| 3 | `Ouvriers, machines ou véhicules de chantier au travail?` | force des preuves visuelles d'activité | Gemma + Claude |
+| 4 | `Voie bloquée ou réduite par des travaux?` | recentre sur l'entrave de circulation | Gemma + Claude |
+| 5 | `Chantier avec activité en cours, pas seulement signalisation?` | contraste explicite signalétique vs actif | Gemma + Claude |
+
+**Résultats** (auto-générés par `run_iterations.py`) :
+
+<!-- BEGIN ITERATIONS TABLE -->
+| # | Modèle | Prompt | Rappel | Précision | F1 | Temps moy. | Note |
+|---|---|---|---|---|---|---|---|
+| 0 | claude | `Chantier?` | 100 % | 50 % | 67 % | 13.0 s | Rappel parfait mais FP systématiques sur les 10 images `sans` — la distinction chantier-actif vs signalétique est floue. |
+| 0 | gemma | `Chantier?` | 70 % | 64 % | 67 % | 12.9 s | 5 parse error(s) comptés comme « sans ». |
+| 1 | claude | `Chantier actif?` | 100 % | 50 % | 67 % | 23.4 s |  |
+| 1 | gemma | `Chantier actif?` | 90 % | 64 % | 75 % | 3.4 s | 3 parse error(s) comptés comme « sans ». |
+| 2 | claude | `Travaux en cours?` | 100 % | 50 % | 67 % | 23.2 s |  |
+| 2 | gemma | `Travaux en cours?` | 100 % | 67 % | 80 % | 3.3 s | 3 parse error(s) comptés comme « sans ». |
+| 3 | claude | `Ouvriers, machines ou véhicules de chantier au travail?` | 90 % | 75 % | 82 % | 20.2 s |  |
+| 3 | gemma | `Ouvriers, machines ou véhicules de chantier au travail?` | 70 % | 58 % | 64 % | 4.7 s | 1 parse error(s) comptés comme « sans ». |
+| 4 | claude | `Voie bloquée ou réduite par des travaux?` | 100 % | 50 % | 67 % | 24.3 s |  |
+| 4 | gemma | `Voie bloquée ou réduite par des travaux?` | 40 % | 33 % | 36 % | 3.9 s | 3 parse error(s) comptés comme « sans ». |
+| 5 | claude | `Chantier avec activité en cours, pas seulement signalisation?` | 100 % | 77 % | 87 % | 22.5 s |  |
+| 5 | gemma | `Chantier avec activité en cours, pas seulement signalisation?` | 50 % | 42 % | 45 % | 3.9 s | 4 parse error(s) comptés comme « sans ». |
+<!-- END ITERATIONS TABLE -->
+
+**Gagnants** :
+- 🏆 **Meilleur F1 (précision) — Claude + `Chantier avec activité en cours, pas seulement signalisation?`** → R 100 %, **P 77 %**, F1 87 %, 22.5 s/img. Le contraste explicite avec "signalisation" fait enfin bouger la précision Claude (qui plafonnait à 50 % sur tous les autres prompts). 3 points sous le seuil de précision.
+- ⚡ **Meilleur vitesse — Gemma + `Travaux en cours?`** → R 100 %, P 67 %, F1 80 %, **3.3 s/img** (~7× plus rapide que Claude). Bon candidat edge malgré ~3 parse errors / 20.
+
+**Observations** :
+- Claude a **rappel 100 % sur 5/6 prompts** — il voit toujours un chantier quand il y en a. La variable c'est la précision, qui ne bouge qu'avec un prompt explicitement contrastif (#3 = 75 %, #5 = 77 %).
+- Gemma est plus sensible au prompt : les reformulations longues le dégradent (#3 = 64 %, #4 = 36 %, #5 = 45 %). Les prompts courts interrogatifs fonctionnent mieux (#1 = 75 %, #2 = 80 %).
+- Gemma produit du JSON invalide ~15 % du temps (3-5 parse errors / 20) ; comptés "sans détection" par convention.
+- Claude est ~7× plus lent (13-24 s vs 3-4 s) — inutilisable tel quel en edge.
+
+**Baseline à figer pour la phase 2** : Claude prompt #5 (meilleur F1 absolu) OU Gemma prompt #2 (meilleur rapport qualité/vitesse, plus proche des contraintes edge). À trancher à l'ouverture de la phase 2.
 
 ## Roadmap post-48h
 
