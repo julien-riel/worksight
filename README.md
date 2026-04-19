@@ -125,6 +125,8 @@ python3 annotate_video.py downtown-olympic
 
 Sort `annotations.json` avec `per_frame`, `segments`, `candidates`, `validations` (préserve les validations existantes au re-run).
 
+**Backup auto** : avant toute réécriture, le script copie l'`annotations.json` actuel dans `data/video-frames/<name>/backups/annotations-YYYYMMDD-HHMMSS.json`. Garde les 5 derniers snapshots, utile pour restaurer en cas de crash/corruption ou pour revenir sur un prompt antérieur.
+
 **3. Valider dans l'UI**
 
 Ouvrir l'onglet **Dataset**, sélectionner la vidéo :

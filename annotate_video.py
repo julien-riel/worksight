@@ -96,6 +96,21 @@ def main() -> int:
     out_path = base / "annotations.json"
     existing_validations = {}
     if out_path.exists():
+        # Backup horodaté avant toute réécriture (on garde les 5 derniers)
+        backups_dir = base / "backups"
+        backups_dir.mkdir(exist_ok=True)
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+        backup_path = backups_dir / f"annotations-{ts}.json"
+        try:
+            backup_path.write_bytes(out_path.read_bytes())
+            print(f"[backup] → {backup_path.name}")
+            # Prune : garde les 5 plus récents
+            existing_backups = sorted(backups_dir.glob("annotations-*.json"))
+            for stale in existing_backups[:-5]:
+                stale.unlink()
+        except Exception as e:
+            print(f"[warn] Backup raté: {e}")
+
         try:
             existing = json.loads(out_path.read_text())
             existing_validations = existing.get("validations", {}) or {}
